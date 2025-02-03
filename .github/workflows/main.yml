@@ -1,8 +1,15 @@
+name: Run Python Script Every 2 Minutes
+
+on:
+  schedule:
+    - cron: "*/4 * * * *"  # Runs change to every 2 minutes
+  workflow_dispatch:
+
 jobs:
   run-python:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -10,13 +17,16 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Run Python script
-        run: python script.py
+      - name: Install Dependencies
+        run: pip install -r requirements.txt || echo "No dependencies"
+
+      - name: Run Python Script
+        run: python main.py  # Make sure this matches your script name
         env:
           FLUKE_KEY: ${{ secrets.FLUKE_KEY }}
           MOTIVE_KEY: ${{ secrets.MOTIVE_KEY }}
-
           FLUKE_ENDPOINT: ${{ vars.FLUKE_ENDPOINT }}
           MOTIVE_ENDPOINT: ${{ vars.MOTIVE_ENDPOINT }}
           TRUCK_IDS: ${{ vars.TRUCK_IDS }}
+
 
