@@ -1,0 +1,22 @@
+jobs:
+  run-python:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Run Python script
+        run: python script.py
+        env:
+          FLUKE_KEY: ${{ secrets.FLUKE_KEY }}
+          MOTIVE_KEY: ${{ secrets.MOTIVE_KEY }}
+
+          FLUKE_ENDPOINT: ${{ vars.FLUKE_ENDPOINT }}
+          MOTIVE_ENDPOINT: ${{ vars.MOTIVE_ENDPOINT }}
+          TRUCK_IDS: ${{ vars.TRUCK_IDS }}
+

@@ -1,0 +1,87 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html><head><title>Python: module AutomaticWOUpload</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head><body bgcolor="#f0f0f8">
+
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="heading">
+<tr bgcolor="#7799ee">
+<td valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial">&nbsp;<br><big><big><strong>AutomaticWOUpload</strong></big></big></font></td
+><td align=right valign=bottom
+><font color="#ffffff" face="helvetica, arial"><a href=".">index</a><br><a href="file:c%3A%5Cusers%5Clucas%5Cgit%5Cmotiveflukeintegration%5Cautomaticwoupload.py">c:\users\lucas\git\motiveflukeintegration\automaticwoupload.py</a></font></td></tr></table>
+    <p><tt>All&nbsp;necessary&nbsp;imports</tt></p>
+<p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#aa55cc">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Modules</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#aa55cc"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><table width="100%" summary="list"><tr><td width="25%" valign=top><a href="json.html">json</a><br>
+</td><td width="25%" valign=top><a href="queue.html">queue</a><br>
+</td><td width="25%" valign=top><a href="requests.html">requests</a><br>
+</td><td width="25%" valign=top><a href="time.html">time</a><br>
+</td></tr></table></td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#eeaa77">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Functions</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#eeaa77"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><dl><dt><a name="-convert_to_post"><strong>convert_to_post</strong></a>(data: list) -&gt; list</dt><dd><tt>Converts&nbsp;filtered&nbsp;data&nbsp;from&nbsp;motive&nbsp;to&nbsp;a&nbsp;format&nbsp;that&nbsp;can&nbsp;be&nbsp;posted&nbsp;to&nbsp;fluke&nbsp;api<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;data&nbsp;(list):&nbsp;List&nbsp;of&nbsp;inspection&nbsp;reports&nbsp;that&nbsp;have&nbsp;been&nbsp;filtered&nbsp;for&nbsp;new&nbsp;issues&nbsp;that&nbsp;must&nbsp;be&nbsp;posted&nbsp;to&nbsp;fluke<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;list:&nbsp;List&nbsp;of&nbsp;inspection&nbsp;reports&nbsp;that&nbsp;have&nbsp;been&nbsp;converted&nbsp;to&nbsp;a&nbsp;format&nbsp;that&nbsp;can&nbsp;be&nbsp;posted&nbsp;to&nbsp;fluke&nbsp;api</tt></dd></dl>
+ <dl><dt><a name="-filter_issues"><strong>filter_issues</strong></a>(inspection_data: list) -&gt; list</dt><dd><tt>Give&nbsp;raw&nbsp;inspection&nbsp;data&nbsp;from&nbsp;Motive,&nbsp;returns&nbsp;a&nbsp;list&nbsp;of&nbsp;inspections&nbsp;that<br>
+only&nbsp;contain&nbsp;issues&nbsp;with&nbsp;the&nbsp;truck.&nbsp;<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;inspection_data&nbsp;(list):&nbsp;Raw&nbsp;inspection&nbsp;data&nbsp;from&nbsp;Motive&nbsp;API<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;list:&nbsp;List&nbsp;of&nbsp;inspections&nbsp;that&nbsp;only&nbsp;contain&nbsp;issues&nbsp;with&nbsp;the&nbsp;truck</tt></dd></dl>
+ <dl><dt><a name="-get_motive_data"><strong>get_motive_data</strong></a>() -&gt; list</dt><dd><tt>Gets&nbsp;the&nbsp;data&nbsp;of&nbsp;10&nbsp;most&nbsp;recent&nbsp;inspection&nbsp;reports&nbsp;from&nbsp;motive&nbsp;API&nbsp;and&nbsp;returns&nbsp;the&nbsp;filtered&nbsp;data<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;list:&nbsp;List&nbsp;of&nbsp;inspection&nbsp;reports&nbsp;that&nbsp;have&nbsp;been&nbsp;filtered&nbsp;for&nbsp;new&nbsp;issues&nbsp;that&nbsp;must&nbsp;be&nbsp;posted&nbsp;to&nbsp;fluke</tt></dd></dl>
+ <dl><dt><a name="-main"><strong>main</strong></a>()</dt><dd><tt>Main&nbsp;loop&nbsp;that&nbsp;checks&nbsp;for&nbsp;new&nbsp;inspection&nbsp;reports&nbsp;from&nbsp;motive&nbsp;and&nbsp;posts&nbsp;them&nbsp;to&nbsp;fluke&nbsp;(or&nbsp;saves&nbsp;them&nbsp;to&nbsp;a&nbsp;csv&nbsp;file&nbsp;during&nbsp;testing)</tt></dd></dl>
+ <dl><dt><a name="-new_data"><strong>new_data</strong></a>(inspection_data: list) -&gt; list</dt><dd><tt>Filters&nbsp;out&nbsp;the&nbsp;data&nbsp;that&nbsp;has&nbsp;already&nbsp;been&nbsp;seen&nbsp;and&nbsp;returns&nbsp;the&nbsp;new&nbsp;data<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;inspection_data&nbsp;(list):&nbsp;List&nbsp;of&nbsp;inspection&nbsp;reports&nbsp;that&nbsp;have&nbsp;been&nbsp;filtered&nbsp;for&nbsp;issues<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;list:&nbsp;List&nbsp;of&nbsp;inspection&nbsp;reports&nbsp;that&nbsp;are&nbsp;new&nbsp;since&nbsp;last&nbsp;run</tt></dd></dl>
+ <dl><dt><a name="-post_WO"><strong>post_WO</strong></a>(data: list) -&gt; list</dt><dd><tt>Posts&nbsp;the&nbsp;work&nbsp;orders&nbsp;to&nbsp;fluke&nbsp;api&nbsp;and&nbsp;returns&nbsp;the&nbsp;responses<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;data&nbsp;(list):&nbsp;List&nbsp;of&nbsp;inspection&nbsp;reports&nbsp;that&nbsp;have&nbsp;been&nbsp;converted&nbsp;to&nbsp;a&nbsp;format&nbsp;that&nbsp;can&nbsp;be&nbsp;posted&nbsp;to&nbsp;fluke&nbsp;api<br>
+&nbsp;<br>
+Returns:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;list:&nbsp;List&nbsp;of&nbsp;responses&nbsp;from&nbsp;the&nbsp;post&nbsp;requests</tt></dd></dl>
+ <dl><dt><a name="-test_save"><strong>test_save</strong></a>(data: list)</dt><dd><tt>When&nbsp;testing,&nbsp;saves&nbsp;the&nbsp;data&nbsp;that&nbsp;would&nbsp;be&nbsp;posted&nbsp;to&nbsp;fluke&nbsp;to&nbsp;a&nbsp;csv&nbsp;file&nbsp;called&nbsp;uploaded_WOs.csv<br>
+&nbsp;<br>
+Args:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;data&nbsp;(list):&nbsp;List&nbsp;of&nbsp;inspection&nbsp;reports&nbsp;converted&nbsp;to&nbsp;a&nbsp;format&nbsp;that&nbsp;can&nbsp;be&nbsp;posted&nbsp;to&nbsp;fluke&nbsp;api</tt></dd></dl>
+</td></tr></table><p>
+<table width="100%" cellspacing=0 cellpadding=2 border=0 summary="section">
+<tr bgcolor="#55aa55">
+<td colspan=3 valign=bottom>&nbsp;<br>
+<font color="#ffffff" face="helvetica, arial"><big><strong>Data</strong></big></font></td></tr>
+    
+<tr><td bgcolor="#55aa55"><tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</tt></td><td>&nbsp;</td>
+<td width="100%"><strong>Previous_IDs</strong> = [{'id': 0, 'inspected_item': 0}, {'id': 1, 'inspected_item': 1}, {'id': 2, 'inspected_item': 2}, {'id': 3, 'inspected_item': 3}, {'id': 4, 'inspected_item': 4}, {'id': 5, 'inspected_item': 5}, {'id': 6, 'inspected_item': 6}, {'id': 7, 'inspected_item': 7}, {'id': 8, 'inspected_item': 8}, {'id': 9, 'inspected_item': 9}]<br>
+<strong>Runs</strong> = 1<br>
+<strong>SECONDS_BETWEEN_RUNS</strong> = 60<br>
+<strong>TRUCK_IDS</strong> = {'C10': 'c4fed5c5-dd59-42a3-8d78-809952ad4cdf', 'C11': 'bff05cfc-7311-41d0-b1ad-25ee1d3cc632', 'C12': '45344ac8-f29d-4164-9a12-fa10fcb30500', 'C14': '935c56dc-6989-4fc8-ba25-c76f93bf1261', 'C15': 'a646399f-b228-45d7-935e-d6b2ec61288c', 'C16': '12fbaa2b-05f2-4637-82e7-996612f1df4b', 'C17': '0cbc0a7b-39ea-477e-9e91-fb329ecd7e5b', 'C18': '261cb7bd-d9c2-4b0d-a143-8fd65d101adc', 'C20': 'c0e13ff9-3b76-4141-9af0-b162ffd70cb0', 'C21': 'f2a17bb6-1888-41b2-8c84-b95035b7f473', ...}<br>
+<strong>fluke</strong> = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrders'<br>
+<strong>fluke_headers</strong> = {'Content-Type': 'application/json', 'Cookie': 'JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....WxsfQ.Gh3b3ibvSeYy7YpqDUI9daup86dYjsM_lisS-8ESWDs'}<br>
+<strong>i</strong> = 9<br>
+<strong>motive</strong> = 'https://api.keeptruckin.com/v2/inspection_report...t_date=2025-01-02&amp;end_date=2025-01-02&amp;per_page=50'<br>
+<strong>motive_headers</strong> = {'X-Api-Key': '9e90504a-82f0-4ed4-b54c-ce37f388f211', 'accept': 'application/json'}<br>
+<strong>site</strong> = 'def'<br>
+<strong>tenant</strong> = 'torcroboticssb.us.accelix.com'</td></tr></table>
+</body></html>
