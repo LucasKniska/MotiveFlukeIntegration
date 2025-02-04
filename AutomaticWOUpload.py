@@ -109,6 +109,9 @@ def new_data(inspection_data: list) -> list:
         if(motiveTime > latestDate): # motive inspection report time comes after the latest date from fluke
             print(f"{motiveTime} happened more recently than {latestDate}")
             filter_data.append(report)
+        else:
+            print(f"{motiveTime} did not happen more recently than {latestDate}")
+
 
     return filter_data
 
@@ -132,8 +135,6 @@ def get_motive_data() -> list:
     response = requests.get(endpoint, headers=motive_headers)
     data = response.json()
 
-    print('Using: ' +  key + " and " + endpoint)
-    print(data)
     f1_data = filter_issues(data['inspection_reports'])
     f2_data = new_data(f1_data)
 
@@ -277,6 +278,8 @@ def test_save(data: list):
     """
 
     # Save the data for testing purposes
+    print("Would have uploaded: " + data)
+
     with open("uploaded_WOs.csv", "a") as f:
         for wo in data:
             f.write(str(wo))
