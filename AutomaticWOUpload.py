@@ -1,9 +1,9 @@
-"""
-All necessary imports
-"""
 import requests
 import os
 import json
+import pandas as pd
+from tqdm import tqdm
+from dateutil import parser
 
 """ 
 Defining all api fields
@@ -71,31 +71,48 @@ def new_data(inspection_data: list) -> list:
     """
 
     # The previous 10 inspection reports that have been sent to Fluke
-    Previous_IDs = []
-    with open ("Previous_IDs.txt", "r") as f:
-        for line in f:
-            Previous_IDs.append(eval(line))
+    key = os.getenv("FLUKE_KEY")
+    url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrders/search-paged'
+
+    headers = {
+        "Content-Type": "application/json", 
+        "Cookie": key
+    }
+    data = {'select': [{'name': 'site'}, {'name': 'createdBy'}, {'name': 'updatedBy'}, {'name': 'updatedSyncDate'}, {'name': 'dataSource'}, {'name': 'status'}, {'name': 'closedOn'}, {'name': 'openedOn'}, {'name': 'startDate'}, {'name': 'assetId'}, {'name': 'requestId'}, {'name': 'scheduledEventId'}, {'name': 'description'}, {'name': 'details'}, {'name': 'taskId'}, {'name': 'priorityCode'}, {'name': 'rimeRanking'}, {'name': 'signature'}, {'name': 'image'}, {'name': 'geolocation'}, {'name': 'reason'}, {'name': 'parentId'}, {'name': 'c_workordertype'}, {'name': 'c_jobstatus'}, {'name': 'c_priority'}, {'name': 'c_completedon'}, {'name': 'c_projectid'}, {'name': 'c_problemtype'}, {'name': 'c_estimatedhours'}, {'name': 'c_downtime'}, {'name': 'c_comments'}, {'name': 'c_completeddate'}, {'name': 'c_failurecode'}, {'name': 'c_issuecode'}, {'name': 'c_department'}, {'name': 'c_linenumber'}, {'name': 'c_availablestatus'}, {'name': 'c_completedby'}, {'name': 'c_closedby'}, {'name': 'c_requestedon'}, {'name': 'c_requesteremail'}, {'name': 'c_site'}, {'name': 'c_building'}, {'name': 'c_imagefield'}, {'name': 'c_floorlevel'}, {'name': 'c_requesterphone'}, {'name': 'c_compid'}, {'name': 'c_onholdreason'}, {'name': 'c_assetmountingposition'}, {'name': 'c_assettypesymptom'}, {'name': 'c_symptom'}, {'name': 'c_foreignkeylookupsymptom'}, {'name': 'c_terminalzone'}, {'name': 'c_downtimestart'}, {'name': 'c_downtimeend'}, {'name': 'c_repairtimehrs'}, {'name': 'c_repairtimestart'}, {'name': 'c_repairtimeend'}, {'name': 'c_location'}, {'name': 'c_documentlink'}, {'name': 'c_symptomassettypediagnosis'}, {'name': 'c_locationdiagnosis'}, {'name': 'c_diagnosis'}, {'name': 'c_documentlinkdiagnosis'}, {'name': 'c_parentasset'}, {'name': 'c_maintenancelog'}, {'name': 'c_parentassetdescription'}, {'name': 'c_firmware'}, {'name': 'c_deploymentsoftware'}, {'name': 'c_assettypeasset'}, {'name': 'c_tasknumber'}, {'name': 'id'}, {'name': 'number'}, {'name': 'createdOn'}, {'name': 'updatedOn'}], 'filter': {'and': [{'name': 'isDeleted', 'op': 'isfalse'}]}, 'order': [{'name': 'number', 'desc': True}], 'pageSize': 20, 'page': 0, 'fkExpansion': True}
+
+    # config
+    data = {'select': [{'name': 'site'}, {'name': 'createdBy'}, {'name': 'updatedBy'}, {'name': 'updatedSyncDate'}, {'name': 'dataSource'}, {'name': 'status'}, {'name': 'closedOn'}, {'name': 'openedOn'}, {'name': 'startDate'}, {'name': 'assetId'}, {'name': 'requestId'}, {'name': 'scheduledEventId'}, {'name': 'description'}, {'name': 'details'}, {'name': 'taskId'}, {'name': 'priorityCode'}, {'name': 'rimeRanking'}, {'name': 'signature'}, {'name': 'image'}, {'name': 'geolocation'}, {'name': 'reason'}, {'name': 'parentId'}, {'name': 'c_workordertype'}, {'name': 'c_jobstatus'}, {'name': 'c_priority'}, {'name': 'c_completedon'}, {'name': 'c_projectid'}, {'name': 'c_problemtype'}, {'name': 'c_estimatedhours'}, {'name': 'c_downtime'}, {'name': 'c_comments'}, {'name': 'c_completeddate'}, {'name': 'c_failurecode'}, {'name': 'c_issuecode'}, {'name': 'c_department'}, {'name': 'c_linenumber'}, {'name': 'c_availablestatus'}, {'name': 'c_completedby'}, {'name': 'c_closedby'}, {'name': 'c_requestedon'}, {'name': 'c_requesteremail'}, {'name': 'c_site'}, {'name': 'c_building'}, {'name': 'c_imagefield'}, {'name': 'c_floorlevel'}, {'name': 'c_requesterphone'}, {'name': 'c_compid'}, {'name': 'c_onholdreason'}, {'name': 'c_assetmountingposition'}, {'name': 'c_assettypesymptom'}, {'name': 'c_symptom'}, {'name': 'c_foreignkeylookupsymptom'}, {'name': 'c_terminalzone'}, {'name': 'c_downtimestart'}, {'name': 'c_downtimeend'}, {'name': 'c_repairtimehrs'}, {'name': 'c_repairtimestart'}, {'name': 'c_repairtimeend'}, {'name': 'c_location'}, {'name': 'c_documentlink'}, {'name': 'c_symptomassettypediagnosis'}, {'name': 'c_locationdiagnosis'}, {'name': 'c_diagnosis'}, {'name': 'c_documentlinkdiagnosis'}, {'name': 'c_parentasset'}, {'name': 'c_maintenancelog'}, {'name': 'c_parentassetdescription'}, {'name': 'c_firmware'}, {'name': 'c_deploymentsoftware'}, {'name': 'c_assettypeasset'}, {'name': 'c_tasknumber'}, {'name': 'id'}, {'name': 'number'}, {'name': 'createdOn'}, {'name': 'updatedOn'}], 'filter': {'and': [{'name': 'isDeleted', 'op': 'isfalse'}]}, 'order': [{'name': 'number', 'desc': True}], 'pageSize': 20, 'page': 0, 'fkExpansion': True}
+
+    # API
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    assert response.status_code == 200
+    response = response.json()
+    dx = response['data']
+    for page in tqdm(range(1, 2), desc='work-orders'):
+        data['page'] = page
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        assert response.status_code == 200
+        dx.extend(response.json()['data'])
+
+    # dataframe
+    df = pd.DataFrame(data={cx: [x[cx] for x in dx] for cx in sorted(dx[0].keys())})
+
+    # get most recent base truck error
+    latestDate = None
+    for i in range(df.shape[0]):
+        latestDate = df.get("openedOn")[i]
+
+        if(df.get("c_priority")[0].get("title")[0:10] == "Base Truck"):
+            break # If latestDate comes from a base truck work order than use that one
+    latestDate = parser.isoparse(latestDate)
 
     # Checks if the new data has already been processed
     filter_data = []
     for report in inspection_data:
-        already_seen = False
-
-        for entry in Previous_IDs:
-            if report['id'] == entry['id'] and report['issues'][0]['inspected_item'] == entry['inspected_item']:
-                already_seen = True
-        if already_seen == False:
+        motiveTime = parser.isoparse(report["date"])
+        if(motiveTime > latestDate): # motive inspection report time comes after the latest date from fluke
+            print(f"{motiveTime} happened more recently than {latestDate}")
             filter_data.append(report)
-            Previous_IDs.append({'id': report['id'], 'inspected_item': report['issues'][0]['inspected_item']})
-
-   # Remove old data that will not be seen again 
-    while len(Previous_IDs) > 10:
-        Previous_IDs.pop(0)
-
-    # Store most recent data to get for next run
-    with open ("Previous_IDs.txt", "w") as f:
-        for i in Previous_IDs:
-            f.write(str(i) + "\n")
 
     return filter_data
 
