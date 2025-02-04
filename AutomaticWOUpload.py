@@ -2,7 +2,6 @@ import requests
 import os
 import json
 import pandas as pd
-from tqdm import tqdm
 from dateutil import parser
 
 """ 
@@ -88,11 +87,11 @@ def new_data(inspection_data: list) -> list:
     assert response.status_code == 200
     response = response.json()
     dx = response['data']
-    for page in tqdm(range(1, 2), desc='work-orders'):
-        data['page'] = page
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        assert response.status_code == 200
-        dx.extend(response.json()['data'])
+
+    data['page'] = 1
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    assert response.status_code == 200
+    dx.extend(response.json()['data'])
 
     # dataframe
     df = pd.DataFrame(data={cx: [x[cx] for x in dx] for cx in sorted(dx[0].keys())})
