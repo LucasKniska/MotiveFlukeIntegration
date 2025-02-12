@@ -85,6 +85,7 @@ def new_data(inspection_data: list) -> list:
 
     # API
     index = 1
+    latestBaseTruckWO = None
     while(latestBaseTruckWO == None):
 
         response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -101,7 +102,6 @@ def new_data(inspection_data: list) -> list:
         df = pd.DataFrame(data={cx: [x[cx] for x in dx] for cx in sorted(dx[0].keys())})
 
         # get most recent base truck error
-        latestBaseTruckWO = None
         for i in range(df.shape[0]):
             if(df.get("c_priority")[i] != None and df.get("c_priority")[i].get("title")[0:10] == "Base Truck"):
                 latestBaseTruckWO = df.loc[i]
@@ -155,7 +155,7 @@ def get_motive_data() -> list:
         issues = issues + new_issues
 
 
-        """
+        
         time = str(response.json()['inspection_reports'][0]['inspection_report']['time'])
         time = datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
 
@@ -168,7 +168,7 @@ def get_motive_data() -> list:
             print("The given time is within the past 24 hours.")
         else:
             break
-        """
+        
             
         try: 
             print(str(len(issues)) + " " + str(index) + " " + str(response.json()['inspection_reports'][0]['inspection_report']['time']))
@@ -331,7 +331,6 @@ def post_WO(data: list) -> list:
 
 
     key = os.getenv("FLUKE_KEY")
-    endpoint = os.getenv("FLUKE_ENDPOINT")
 
     fluke_headers = {
         "Content-Type": "application/json", 
