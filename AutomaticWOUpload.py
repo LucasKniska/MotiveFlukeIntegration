@@ -104,12 +104,12 @@ def new_data(inspection_data: list) -> list:
         # get most recent base truck error
         for i in range(df.shape[0]):
             if(df.get("c_priority")[i] != None and df.get("c_priority")[i].get("title")[0:10] == "Base Truck"):
-                latestBaseTruckWO = df.loc[i]
+                latestBaseTruckWO = df.get("openedOn")[i]
                 break # If latestDate comes from a base truck work order than use that one
 
         index += 1
     
-    latestFlukeUpload = parser.isoparse(latestBaseTruckWO['openedOn'])
+    latestFlukeUpload = parser.isoparse(latestBaseTruckWO)
 
     # Checks if the new data has already been processed
     filter_data = []
