@@ -120,9 +120,6 @@ def new_data(inspection_data: list) -> list:
             print(f"{motiveTime} happened more recently than {latestFlukeUpload}")
             filter_data.append(report)
 
-    # REMOVE FOR REAL THING
-    filter_data = inspection_data
-
     return filter_data
 
 def get_motive_data() -> list:
