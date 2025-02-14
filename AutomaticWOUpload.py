@@ -75,12 +75,19 @@ def new_data(inspection_data: list) -> list:
     url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrders/search-paged'
 
     # Cookie to the sandbox
-    key = os.getenv("FLUKE_KEY")
+    # key = os.getenv("FLUKE_KEY")
 
+    # headers = {
+    #     "Content-Type": "application/json", 
+    #     "Cookie": key
+    # }
+
+    # Cookie to the sandbox
     headers = {
         "Content-Type": "application/json", 
-        "Cookie": key
+        "Cookie": f"JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3MiLCJleHAiOjQxMDI0NDQ4MDAsInNpZCI6bnVsbCwiaWlkIjpudWxsfQ.Gh3b3ibvSeYy7YpqDUI9daup86dYjsM_lisS-8ESWDs"
     }
+
     data = {'select': [{'name': 'site'}, {'name': 'createdBy'}, {'name': 'updatedBy'}, {'name': 'updatedSyncDate'}, {'name': 'dataSource'}, {'name': 'status'}, {'name': 'closedOn'}, {'name': 'openedOn'}, {'name': 'startDate'}, {'name': 'assetId'}, {'name': 'requestId'}, {'name': 'scheduledEventId'}, {'name': 'description'}, {'name': 'details'}, {'name': 'taskId'}, {'name': 'priorityCode'}, {'name': 'rimeRanking'}, {'name': 'signature'}, {'name': 'image'}, {'name': 'geolocation'}, {'name': 'reason'}, {'name': 'parentId'}, {'name': 'c_workordertype'}, {'name': 'c_jobstatus'}, {'name': 'c_priority'}, {'name': 'c_completedon'}, {'name': 'c_projectid'}, {'name': 'c_problemtype'}, {'name': 'c_estimatedhours'}, {'name': 'c_downtime'}, {'name': 'c_comments'}, {'name': 'c_completeddate'}, {'name': 'c_failurecode'}, {'name': 'c_issuecode'}, {'name': 'c_department'}, {'name': 'c_linenumber'}, {'name': 'c_availablestatus'}, {'name': 'c_completedby'}, {'name': 'c_closedby'}, {'name': 'c_requestedon'}, {'name': 'c_requesteremail'}, {'name': 'c_site'}, {'name': 'c_building'}, {'name': 'c_imagefield'}, {'name': 'c_floorlevel'}, {'name': 'c_requesterphone'}, {'name': 'c_compid'}, {'name': 'c_onholdreason'}, {'name': 'c_assetmountingposition'}, {'name': 'c_assettypesymptom'}, {'name': 'c_symptom'}, {'name': 'c_foreignkeylookupsymptom'}, {'name': 'c_terminalzone'}, {'name': 'c_downtimestart'}, {'name': 'c_downtimeend'}, {'name': 'c_repairtimehrs'}, {'name': 'c_repairtimestart'}, {'name': 'c_repairtimeend'}, {'name': 'c_location'}, {'name': 'c_documentlink'}, {'name': 'c_symptomassettypediagnosis'}, {'name': 'c_locationdiagnosis'}, {'name': 'c_diagnosis'}, {'name': 'c_documentlinkdiagnosis'}, {'name': 'c_parentasset'}, {'name': 'c_maintenancelog'}, {'name': 'c_parentassetdescription'}, {'name': 'c_firmware'}, {'name': 'c_deploymentsoftware'}, {'name': 'c_assettypeasset'}, {'name': 'c_tasknumber'}, {'name': 'id'}, {'name': 'number'}, {'name': 'createdOn'}, {'name': 'updatedOn'}], 'filter': {'and': [{'name': 'isDeleted', 'op': 'isfalse'}]}, 'order': [{'name': 'number', 'desc': True}], 'pageSize': 20, 'page': 0, 'fkExpansion': True}
 
     # API
@@ -131,11 +138,16 @@ def get_motive_data() -> list:
     """
 
     # Environment variables from GitHub
-    key = os.getenv("MOTIVE_KEY")
+    # key = os.getenv("MOTIVE_KEY")
+
+    # motive_headers = {
+    #     "accept": "application/json", 
+    #     "X-Api-Key": key
+    # }
 
     motive_headers = {
         "accept": "application/json", 
-        "X-Api-Key": key
+        "X-Api-Key": "9e90504a-82f0-4ed4-b54c-ce37f388f211"
     }
 
     index = 1
@@ -275,19 +287,33 @@ def convert_to_post(data: list) -> list:
                 'title': 'Base Truck Corrective'
             }
         
+
+        try: 
+            assetId = {
+                'entity': 'Assets', 
+                'id': TRUCK_IDS[post['vehicle']['number']],
+                'image': None,
+                'isDeleted': False,
+                'subsubtitle': post['vehicle']['make'],
+                'subtitle': post['vehicle']['number'],
+                'title': post['vehicle']['number']
+            }
+        except:
+            assetId = {
+                'entity': 'Assets', 
+                'id': None,
+                'image': None,
+                'isDeleted': False,
+                'subsubtitle': None,
+                'subtitle': None,
+                'title': None
+            }
+
         # payload for post request
         post_data = {
             "occurredOn": post['date'],
             "properties": {
-                'assetId': {
-                    'entity': 'Assets', 
-                    'id': TRUCK_IDS[post['vehicle']['number']],
-                    'image': None,
-                    'isDeleted': False,
-                    'subsubtitle': post['vehicle']['make'],
-                    'subtitle': post['vehicle']['number'],
-                    'title': post['vehicle']['number']
-                },
+                'assetId': assetId,
                 'description': ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)) if len(description) > 1 else description[0],
                 'details': f"Inspection Type: {post['inspection_type']}, Odometer: {post['odometer']}",
                 'createdBy': {
@@ -327,11 +353,17 @@ def post_WO(data: list) -> list:
     """
 
 
-    key = os.getenv("FLUKE_KEY")
+    # key = os.getenv("FLUKE_KEY")
 
+    # fluke_headers = {
+    #     "Content-Type": "application/json", 
+    #     "Cookie": key
+    # }
+
+    # Cookie to the sandbox
     fluke_headers = {
         "Content-Type": "application/json", 
-        "Cookie": key
+        "Cookie": f"JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3MiLCJleHAiOjQxMDI0NDQ4MDAsInNpZCI6bnVsbCwiaWlkIjpudWxsfQ.Gh3b3ibvSeYy7YpqDUI9daup86dYjsM_lisS-8ESWDs"
     }
 
 
