@@ -124,7 +124,6 @@ def new_data(inspection_data: list) -> list:
         motiveTime = parser.isoparse(report["date"])
         
         if(motiveTime > latestFlukeUpload): # if motive inspection report time comes after the latest date from fluke
-            print(f"{motiveTime} happened more recently than {latestFlukeUpload}")
             filter_data.append(report)
 
     return filter_data
@@ -174,7 +173,7 @@ def get_motive_data() -> list:
 
         # Check if the given time is within the past 24 hours
         if past_24_hours <= time <= now:
-            print("The given time is within the past 24 hours.")
+            pass
         else:
             break
         
@@ -235,109 +234,111 @@ def convert_to_post(data: list) -> list:
     }
     converted_data = []
     
-    for post in data: 
+    try: 
 
-        print("Post: " + str(post))
+        for post in data: 
 
-        # building description
-        description = []
-        for issue in post['issues']:
+            # building description
+            description = []
+            for issue in post['issues']:
 
-            if(issue['category'] == "Other"):
-                issue['category'] = "Category - Other"
+                if(issue['category'] == "Other"):
+                    issue['category'] = "Category - Other"
 
-            adding = f"{issue['category']} + {issue['notes']}"
+                adding = f"{issue['category']} + {issue['notes']}"
 
-            if issue['priority'] == 'major': # puts the major issue first in the description
-                description.insert(0, "Major Issue: " + adding)
-            else:
-                description.append("Minor Issue: " + adding)
+                if issue['priority'] == 'major': # puts the major issue first in the description
+                    description.insert(0, "Major Issue: " + adding)
+                else:
+                    description.append("Minor Issue: " + adding)
 
-        # building overall priority
-        overall_priority = { # updated to major if there is a major issue in the inspection report
-            'entity': 'PriorityLevels',
-            'id': '3ed2ba71-fe10-47a3-abba-a92373957b0e',
-            'isDeleted': False,
-            'number': 7,
-            'title': 'Base Truck Non-Blocking'
-        } 
-        if description[0][0:4] == 'Major':
-            overall_priority = {
+            # building overall priority
+            overall_priority = { # updated to major if there is a major issue in the inspection report
                 'entity': 'PriorityLevels',
-                'id': '954c61fe-6f07-4c5c-8de4-b72594321c42',
+                'id': '3ed2ba71-fe10-47a3-abba-a92373957b0e',
                 'isDeleted': False,
-                'number': 6,
-                'title': 'Base Truck'
+                'number': 7,
+                'title': 'Base Truck Non-Blocking'
             } 
+            if description[0][0:4] == 'Major':
+                overall_priority = {
+                    'entity': 'PriorityLevels',
+                    'id': '954c61fe-6f07-4c5c-8de4-b72594321c42',
+                    'isDeleted': False,
+                    'number': 6,
+                    'title': 'Base Truck'
+                } 
 
-        # building work order type
-        work_order_type = { # updated to major if there is a major issue in the inspection report
-                'entity': 'WorkOrderTypes',
-                'id': '94b4593d-8e8b-49ab-a71c-7c0430667d50',
-                'isDeleted': False,
-                'number': 21,
-                'title': 'Base Truck Preventive'
-        }
-        if description[0][0:4] == 'Major':
-            work_order_type = { 
-                'entity': 'WorkOrderTypes',
-                'id': 'b2f98322-14af-44a9-b853-e7d0ec8ff9f7',
-                'isDeleted': False,
-                'number': 20,
-                'title': 'Base Truck Corrective'
+            # building work order type
+            work_order_type = { # updated to major if there is a major issue in the inspection report
+                    'entity': 'WorkOrderTypes',
+                    'id': '94b4593d-8e8b-49ab-a71c-7c0430667d50',
+                    'isDeleted': False,
+                    'number': 21,
+                    'title': 'Base Truck Preventive'
             }
-        
+            if description[0][0:4] == 'Major':
+                work_order_type = { 
+                    'entity': 'WorkOrderTypes',
+                    'id': 'b2f98322-14af-44a9-b853-e7d0ec8ff9f7',
+                    'isDeleted': False,
+                    'number': 20,
+                    'title': 'Base Truck Corrective'
+                }
+            
 
-        try: 
-            assetId = {
-                'entity': 'Assets', 
-                'id': TRUCK_IDS[post['vehicle']['number']],
-                'image': None,
-                'isDeleted': False,
-                'subsubtitle': post['vehicle']['make'],
-                'subtitle': post['vehicle']['number'],
-                'title': post['vehicle']['number']
+            try: 
+                assetId = {
+                    'entity': 'Assets', 
+                    'id': TRUCK_IDS[post['vehicle']['number']],
+                    'image': None,
+                    'isDeleted': False,
+                    'subsubtitle': post['vehicle']['make'],
+                    'subtitle': post['vehicle']['number'],
+                    'title': post['vehicle']['number']
+                }
+            except:
+                assetId = {
+                    'entity': 'Assets', 
+                    'id': None,
+                    'image': None,
+                    'isDeleted': False,
+                    'subsubtitle': None,
+                    'subtitle': None,
+                    'title': None
+                }
+
+            # payload for post request
+            post_data = {
+                "occurredOn": post['date'],
+                "properties": {
+                    'assetId': assetId,
+                    'description': ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)) if len(description) > 1 else description[0],
+                    'details': f"Inspection Type: {post['inspection_type']}, Odometer: {post['odometer']}",
+                    'createdBy': {
+                        'entity': 'UserData',
+                        'id': '00000000-0000-0000-0000-000000000002', # Need to get user UUID by username
+                        'number': 0, # Need to get the user number
+                        'title': f"{post['driver']['last_name'].replace(',', '')} {post['driver']['first_name']}"
+                    },
+                    'c_priority': overall_priority,
+                    'c_jobstatus': {
+                        'entity': 'JobStatus', 
+                        'id': '11111111-8588-40d2-b33d-111111111113', # UUID For New
+                        'isDeleted': False, 
+                        'number': 3, 
+                        'title': 'New'
+                    },
+                    'c_workordertype': work_order_type,
+                    'c_requesteremail': post['driver']['email'],
+                }
             }
-        except:
-            assetId = {
-                'entity': 'Assets', 
-                'id': None,
-                'image': None,
-                'isDeleted': False,
-                'subsubtitle': None,
-                'subtitle': None,
-                'title': None
-            }
 
-        # payload for post request
-        post_data = {
-            "occurredOn": post['date'],
-            "properties": {
-                'assetId': assetId,
-                'description': ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)) if len(description) > 1 else description[0],
-                'details': f"Inspection Type: {post['inspection_type']}, Odometer: {post['odometer']}",
-                'createdBy': {
-                    'entity': 'UserData',
-                    'id': '00000000-0000-0000-0000-000000000002', # Need to get user UUID by username
-                    'number': 0, # Need to get the user number
-                    'title': f"{post['driver']['last_name'].replace(',', '')} {post['driver']['first_name']}"
-                },
-                'c_priority': overall_priority,
-                'c_jobstatus': {
-                    'entity': 'JobStatus', 
-                    'id': '11111111-8588-40d2-b33d-111111111113', # UUID For New
-                    'isDeleted': False, 
-                    'number': 3, 
-                    'title': 'New'
-                },
-                'c_workordertype': work_order_type,
-                'c_requesteremail': post['driver']['email'],
-
-
-            }
-        }
-
-        converted_data.append(post_data)
+            converted_data.append(post_data)
+    except Exception as e:
+        print(f"An error occurred with a data conversion: {e}")
+        print("The data that could not be posted is: \n" + str(post))
+        print("This data will not be posted to the fluke system. This error may repeat on multiple runs until a newer Work Order is posted.")
 
     return converted_data
 
@@ -378,19 +379,14 @@ def post_WO(data: list) -> list:
 
 def test_save(data: list):
     """
-    When testing, saves the data that would be posted to fluke to a csv file called uploaded_WOs.csv
+    When testing, declares what data that would be posted to fluke
 
     Args:
         data (list): List of inspection reports converted to a format that can be posted to fluke api
     """
 
     # Save the data for testing purposes
-    print("Saving Data")
-
-    with open("uploaded_WOs.csv", "a") as f:
-        for wo in data:
-            f.write(str(wo))
-            f.write('\n')
+    print("Would have posted data")
 
 def main():
     """
