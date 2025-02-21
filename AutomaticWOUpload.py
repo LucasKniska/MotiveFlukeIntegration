@@ -424,10 +424,12 @@ def main():
     WO_posts = convert_to_post(data)
 
     # posts work orders to fluke and returns the responses
-    # responses = post_WO(WO_posts)
+    responses = post_WO(WO_posts)
+
+    print(responses)
 
     # Saves work order to csv file during testing
-    test_save(WO_posts)
+    # test_save(WO_posts)
     
 
 if __name__ == "__main__":
