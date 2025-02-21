@@ -329,7 +329,7 @@ def convert_to_post(data: list) -> list:
 
             
             if(trailerId == None):
-                print(f'{post['asset']['name']} is not a valid trailer in fluke. Ending this post.')
+                print(f'{post} is not a valid trailer in fluke. Ending this post.')
                 break
 
             assetId = {
