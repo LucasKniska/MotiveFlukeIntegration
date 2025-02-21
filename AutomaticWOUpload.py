@@ -307,7 +307,7 @@ def convert_to_post(data: list) -> list:
                     truckId = row[1]
 
             if(truckId == None):
-                print(f'{post['vehicle']['number']} is not a valid truck in fluke. Ending this post.')
+                print(f'{post} is not a valid truck in fluke. Ending this post.')
                 break
 
             assetId = {
