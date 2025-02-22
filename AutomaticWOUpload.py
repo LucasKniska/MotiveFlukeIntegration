@@ -299,6 +299,9 @@ def convert_to_post(data: list) -> list:
                 if post['vehicle']['number'] in row[0]:
                     truckId = row[1]
 
+            if truckId == None:
+                print(f'{post} is not a valid truck in fluke. Ending this post.')
+
             assetId = {
                 'entity': 'Assets', 
                 'id': truckId,
@@ -313,6 +316,9 @@ def convert_to_post(data: list) -> list:
             for row in df:
                 if post['asset']['name'] in row[0]:
                     trailerId = row[1]
+
+            if trailerId == None:
+                print(f'{post} is not a valid trailer in fluke. Ending this post.')
 
             assetId = {
                 'entity': 'Assets', 
