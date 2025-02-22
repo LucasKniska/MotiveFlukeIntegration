@@ -7,6 +7,23 @@ from tqdm import tqdm
 import os
 
 
+# Cookie to the sandbox
+key = os.getenv("FLUKE_KEY")
+
+headers = {
+    "Content-Type": "application/json", 
+    "Cookie": key
+}
+
+# Environment variables from GitHub
+key = os.getenv("MOTIVE_KEY")
+
+motive_headers = {
+    "accept": "application/json", 
+    "X-Api-Key": key
+}
+
+
 def filter_issues(inspection_data: list) -> list:
   """
   Give raw inspection data from Motive, returns a list of inspections that
@@ -72,17 +89,6 @@ def new_data(inspection_data: list) -> list:
     url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrders/search-paged'
 
     # Cookie to the sandbox
-    key = os.getenv("FLUKE_KEY")
-
-    headers = {
-        "Content-Type": "application/json", 
-        "Cookie": key
-    }
-
-    # Cookie to the sandbox
-
-    headers = {'Content-Type': 'application/json', 'Cookie': key}
-
     data = {'select': [{'name': 'site'}, {'name': 'createdBy'}, {'name': 'updatedBy'}, {'name': 'updatedSyncDate'}, {'name': 'dataSource'}, {'name': 'status'}, {'name': 'closedOn'}, {'name': 'openedOn'}, {'name': 'startDate'}, {'name': 'assetId'}, {'name': 'requestId'}, {'name': 'scheduledEventId'}, {'name': 'description'}, {'name': 'details'}, {'name': 'taskId'}, {'name': 'priorityCode'}, {'name': 'rimeRanking'}, {'name': 'signature'}, {'name': 'image'}, {'name': 'geolocation'}, {'name': 'reason'}, {'name': 'parentId'}, {'name': 'c_workordertype'}, {'name': 'c_jobstatus'}, {'name': 'c_priority'}, {'name': 'c_completedon'}, {'name': 'c_projectid'}, {'name': 'c_problemtype'}, {'name': 'c_estimatedhours'}, {'name': 'c_downtime'}, {'name': 'c_comments'}, {'name': 'c_completeddate'}, {'name': 'c_failurecode'}, {'name': 'c_issuecode'}, {'name': 'c_department'}, {'name': 'c_linenumber'}, {'name': 'c_availablestatus'}, {'name': 'c_completedby'}, {'name': 'c_closedby'}, {'name': 'c_requestedon'}, {'name': 'c_requesteremail'}, {'name': 'c_site'}, {'name': 'c_building'}, {'name': 'c_imagefield'}, {'name': 'c_floorlevel'}, {'name': 'c_requesterphone'}, {'name': 'c_compid'}, {'name': 'c_onholdreason'}, {'name': 'c_assetmountingposition'}, {'name': 'c_assettypesymptom'}, {'name': 'c_symptom'}, {'name': 'c_foreignkeylookupsymptom'}, {'name': 'c_terminalzone'}, {'name': 'c_downtimestart'}, {'name': 'c_downtimeend'}, {'name': 'c_repairtimehrs'}, {'name': 'c_repairtimestart'}, {'name': 'c_repairtimeend'}, {'name': 'c_location'}, {'name': 'c_documentlink'}, {'name': 'c_symptomassettypediagnosis'}, {'name': 'c_locationdiagnosis'}, {'name': 'c_diagnosis'}, {'name': 'c_documentlinkdiagnosis'}, {'name': 'c_parentasset'}, {'name': 'c_maintenancelog'}, {'name': 'c_parentassetdescription'}, {'name': 'c_firmware'}, {'name': 'c_deploymentsoftware'}, {'name': 'c_assettypeasset'}, {'name': 'c_tasknumber'}, {'name': 'id'}, {'name': 'number'}, {'name': 'createdOn'}, {'name': 'updatedOn'}], 'filter': {'and': [{'name': 'isDeleted', 'op': 'isfalse'}]}, 'order': [{'name': 'number', 'desc': True}], 'pageSize': 20, 'page': 0, 'fkExpansion': True}
 
     # API
@@ -130,18 +136,6 @@ def get_motive_data() -> list:
     Returns:
         list: List of inspection reports that have been filtered for new issues that must be posted to fluke
     """
-
-    # Environment variables from GitHub
-    key = os.getenv("MOTIVE_KEY")
-
-    motive_headers = {
-        "accept": "application/json", 
-        "X-Api-Key": key
-    }
-
-    # motive_headers = {
-    #     "accept": "application/json", 
-    # }
 
     # Gets all of the issues within the past 24 hours
     index = 1
@@ -200,12 +194,6 @@ def convert_to_post(data: list) -> list:
         # config
         url = 'https://torcroboticssb.us.accelix.com/api/entities/def/Assets/search-paged'
 
-        key = os.getenv("FLUKE_KEY")
-
-        headers = {
-            "Content-Type": "application/json", 
-            "Cookie": key
-        }
         data = {
             "select": [
                 {"name": "c_description"},
@@ -252,16 +240,22 @@ def convert_to_post(data: list) -> list:
 
     converted_data = []
     
+    # For every truck that needs a post
     for post in data: 
+
         # building description
         description = []
+        under_description = []
+
         for issue in post['issues']:
-            adding = f"{issue['category']} + {issue['notes']}"
+            adding = f"{issue['notes']}"
 
             if issue['priority'] == 'major': # puts the major issue first in the description
-                description.insert(0, "Major Issue: " + adding)
+                description.insert(0, "Major Issue - " + issue['category'])
+                under_description.insert(0, adding)
             else:
-                description.append("Minor Issue: " + adding)
+                description.append("Minor Issue - " + issue['category'])
+                under_description.append(adding)
 
         # building overall priority
         overall_priority = { # updated to major if there is a major issue in the inspection report
@@ -271,17 +265,17 @@ def convert_to_post(data: list) -> list:
             'number': 7,
             'title': 'Base Truck Non-Blocking'
         } 
-        if description[0][0:4] == 'Major':
+        if 'Major' in description[0]:
             overall_priority = {
                 'entity': 'PriorityLevels',
                 'id': '954c61fe-6f07-4c5c-8de4-b72594321c42',
                 'isDeleted': False,
                 'number': 6,
-                'title': 'Base Truck'
+                'title': 'Base Truck Blocking'
             } 
 
         # building work order type
-        if description[0][0:4] == 'Major':
+        if 'Major' in description[0]:
             work_order_type = { 
                 'entity': 'WorkOrderTypes',
                 'id': 'b2f98322-14af-44a9-b853-e7d0ec8ff9f7',
@@ -301,14 +295,9 @@ def convert_to_post(data: list) -> list:
 
         if post['vehicle'] != None:
 
-            truckId = None
             for row in df:
                 if post['vehicle']['number'] in row[0]:
                     truckId = row[1]
-
-            if(truckId == None):
-                print(f'{post} is not a valid truck in fluke. Ending this post.')
-                break
 
             assetId = {
                 'entity': 'Assets', 
@@ -321,16 +310,9 @@ def convert_to_post(data: list) -> list:
             }
         else:
             
-            trailerId = None
-
             for row in df:
                 if post['asset']['name'] in row[0]:
                     trailerId = row[1]
-
-            
-            if(trailerId == None):
-                print(f'{post} is not a valid trailer in fluke. Ending this post.')
-                break
 
             assetId = {
                 'entity': 'Assets', 
@@ -347,8 +329,8 @@ def convert_to_post(data: list) -> list:
             "occurredOn": post['date'],
             "properties": {
                 'assetId': assetId,
-                'description': ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)),
-                'details': f"Inspection Type: {post['inspection_type']}",
+                'description': ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)) if len(description) != 1 else description[0],
+                'details': post['inspection_type'] + ' Inspection\n' + ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(under_description)) if len(description) != 1 else post['inspection_type'] + ' Inspection\n' + under_description[0],
                 'createdBy': {
                     'entity': 'UserData',
                     'id': '00000000-0000-0000-0000-000000000002', # Need to get user UUID by username
@@ -385,29 +367,23 @@ def post_WO(data: list) -> list:
         list: List of responses from the post requests
     """
 
-
-    key = os.getenv("FLUKE_KEY")
-
-    fluke_headers = {
-        "Content-Type": "application/json", 
-        "Cookie": key
-    }
-
-    # Cookie to the sandbox
-    # fluke_headers = {
-    #     "Content-Type": "application/json", 
-    # }
-
     # Config
     tenant = "torcroboticssb.us.accelix.com"
     site = "def"
-    endpoint = f"https://{tenant}/api/entities/{site}/WorkOrders"
-
+    woEndpoint = f"https://{tenant}/api/entities/{site}/WorkOrders"
+    worEndpoint = f"https://{tenant}/api/entities/{site}/WorkOrdersRequests"
 
     responses = []
     # Send a post request with the data
     for work_order in data:
-        response = requests.post(endpoint, headers=fluke_headers, data=json.dumps(work_order))
+        
+        endpoint = ""
+        if(work_order['properties']['c_priority']['title'] == 'Base Truck Blocking'):
+            endpoint = woEndpoint
+        else:
+            endpoint = worEndpoint
+
+        response = requests.post(endpoint, headers=headers, data=json.dumps(work_order))
         responses.append(response)
 
     return responses
