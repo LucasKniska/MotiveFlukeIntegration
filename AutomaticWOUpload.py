@@ -8,9 +8,7 @@ import os
 
 
 # Cookie to the sandbox
-# key = os.getenv("FLUKE_KEY")
-
-sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
+sandbox_key = os.getenv("FLUKE_KEY")
 
 headers = {
     "Content-Type": "application/json", 
@@ -18,17 +16,13 @@ headers = {
 }
 
 # Environment variables from GitHub
-# key = os.getenv("MOTIVE_KEY")
-
-# motive_headers = {
-#     "accept": "application/json", 
-#     "X-Api-Key": key
-# }
+key = os.getenv("MOTIVE_KEY")
 
 motive_headers = {
     "accept": "application/json", 
-    "X-Api-Key": "9e90504a-82f0-4ed4-b54c-ce37f388f211"
+    "X-Api-Key": key
 }
+
 
 
 def filter_issues(inspection_data: list) -> list:
@@ -563,6 +557,10 @@ def main():
     # returns a list of recent inspection reports that had major or minor issues
     data = get_motive_data()
     
+    if len(data) == 0:
+        print("No new data.")
+        return
+
     # converts the previous data list to a list that can be posted to fluke api
     WO_posts = convert_to_post(data)
 
