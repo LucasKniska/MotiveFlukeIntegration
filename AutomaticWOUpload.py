@@ -409,12 +409,8 @@ def convert_to_post(data: list) -> list:
         for issue in post['issues']:
             adding = f"{issue['notes']}"
 
-            if issue['priority'] == 'major': # puts the major issue first in the description
-                description.insert(0, "Major Issue - " + issue['category'])
-                under_description.insert(0, adding)
-            else:
-                description.append("Minor Issue - " + issue['category'])
-                under_description.append(adding)
+            description.append(issue['category'])
+            under_description.append(adding)
 
         # Holder for the asset sent to work order
         assetId = {}
@@ -437,7 +433,7 @@ def convert_to_post(data: list) -> list:
                     'isDeleted': False,
                     'subsubtitle': post['vehicle']['make'].title(),
                     'subtitle': post['vehicle']['number'],
-                    'title': post['vehicle']['number']
+                    'title': post['vehicle']['number'],
                 }
             else:
                 
@@ -468,7 +464,7 @@ def convert_to_post(data: list) -> list:
             "properties": {
                 'assetId': assetId,
                 'description': ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)) if len(description) != 1 else description[0],
-                'details': post['inspection_type'] + ' Inspection\n' + ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(under_description)) if len(description) != 1 else post['inspection_type'] + ' Inspection\n' + under_description[0],
+                'details': f'Base Truck - {post["inspection_type"]} - ' + ' - '.join(f"Minor Issue - {desc}" for desc in under_description),
                 'createdBy': {
                     'entity': 'UserData',
                     'id': '00000000-0000-0000-0000-000000000002', # Need to get user UUID by username
