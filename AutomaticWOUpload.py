@@ -178,7 +178,6 @@ def get_motive_data() -> list:
 
     return data
 
-
 def convert_to_post(data: list) -> list: 
     """
     Converts filtered data from motive to a format that can be posted to fluke api
@@ -293,43 +292,53 @@ def convert_to_post(data: list) -> list:
             }
 
 
-        if post['vehicle'] != None:
+        # Holder for the asset sent to work order
+        assetId = {}
 
-            for row in df:
-                if post['vehicle']['number'] in row[0]:
-                    truckId = row[1]
+        try: 
+            if post['vehicle'] != None:
 
-            if truckId == None:
-                print(f'{post} is not a valid truck in fluke. Ending this post.')
+                for row in df:
+                    if post['vehicle']['number'] in row[0]:
+                        truckId = row[1]
 
-            assetId = {
-                'entity': 'Assets', 
-                'id': truckId,
-                'image': None,
-                'isDeleted': False,
-                'subsubtitle': post['vehicle']['make'].title(),
-                'subtitle': post['vehicle']['number'],
-                'title': post['vehicle']['number']
-            }
-        else:
-            
-            for row in df:
-                if post['asset']['name'] in row[0]:
-                    trailerId = row[1]
+                if truckId == None:
+                    print(f'{post} is not a valid truck in fluke. Ending this post.')
+                    continue
 
-            if trailerId == None:
-                print(f'{post} is not a valid trailer in fluke. Ending this post.')
+                assetId = {
+                    'entity': 'Assets', 
+                    'id': truckId,
+                    'image': None,
+                    'isDeleted': False,
+                    'subsubtitle': post['vehicle']['make'].title(),
+                    'subtitle': post['vehicle']['number'],
+                    'title': post['vehicle']['number']
+                }
+            else:
+                
+                for row in df:
+                    if post['asset']['name'] in row[0]:
+                        trailerId = row[1]
 
-            assetId = {
-                'entity': 'Assets', 
-                'id': trailerId, # Need to be able to get ids for trailer assets - use post['asset']['name']
-                'image': None,
-                'isDeleted': False,
-                'subsubtitle': post['asset']['make'],
-                'subtitle': post['asset']['name'],
-                'title': post['asset']['name']
-            }
+                if trailerId == None:
+                    print(f'{post} is not a valid trailer in fluke. Ending this post.')
+                    continue
+
+                assetId = {
+                    'entity': 'Assets', 
+                    'id': trailerId, # Need to be able to get ids for trailer assets - use post['asset']['name']
+                    'image': None,
+                    'isDeleted': False,
+                    'subsubtitle': post['asset']['make'],
+                    'subtitle': post['asset']['name'],
+                    'title': post['asset']['name']
+                }
         
+        except Exception as err:
+            print("Could not process the asset of: " + str(post))
+            continue
+
         # payload for post request
         post_data = {
             "occurredOn": post['date'],
@@ -352,15 +361,14 @@ def convert_to_post(data: list) -> list:
                     'title': 'New'
                 },
                 'c_workordertype': work_order_type,
-                'c_requesteremail': post['driver']['email'],
-
-
+                'c_requesteremail': post['driver']['email']
             }
         }
 
         converted_data.append(post_data)
 
     return converted_data
+
 
 def post_WO(data: list) -> list:
     """
