@@ -292,43 +292,20 @@ def convert_to_post(data: list) -> list:
                 under_description.append(adding)
 
         # building overall priority
-        overall_priority = { # updated to major if there is a major issue in the inspection report
+        overall_priority = {
             'entity': 'PriorityLevels',
-            'id': '3ed2ba71-fe10-47a3-abba-a92373957b0e',
+            'id': '954c61fe-6f07-4c5c-8de4-b72594321c42',
             'isDeleted': False,
-            'number': 7,
-            'title': 'Base Truck Non-Blocking'
+            'number': 6,
+            'title': 'Base Truck Blocking'
         } 
-        if 'Major' in description[0]:
-            overall_priority = {
-                'entity': 'PriorityLevels',
-                'id': '954c61fe-6f07-4c5c-8de4-b72594321c42',
-                'isDeleted': False,
-                'number': 6,
-                'title': 'Base Truck Blocking'
-            } 
 
         # building work order type
-        if 'Major' in description[0]:
-            work_order_type = { 
-                'entity': 'WorkOrderTypes',
-                'id': 'b2f98322-14af-44a9-b853-e7d0ec8ff9f7',
-                'isDeleted': False,
-                'number': 20,
-                'title': 'Base Truck Corrective'
-            }
-        else:
-            work_order_type = { # made to major if there is a major issue in the inspection report
-                'entity': 'WorkOrderTypes',
-                'id': '94b4593d-8e8b-49ab-a71c-7c0430667d50',
-                'isDeleted': False,
-                'number': 21,
-                'title': 'Base Truck Preventive'
-            }
-
+        work_order_type = {'entity': 'WorkOrderTypes', 'id': 'f04406fe-847e-4d49-899e-0053758d7fc3', 'isDeleted': False, 'number': 24, 'title': 'Motive Base Truck Corrective'}
 
         # Holder for the asset sent to work order
         assetId = {}
+        c_compid = ""
 
         try: 
             if post['vehicle'] != None:
@@ -350,6 +327,8 @@ def convert_to_post(data: list) -> list:
                     'subtitle': post['vehicle']['number'],
                     'title': post['vehicle']['number']
                 }
+
+                c_compid = post['vehicle']['number']
             else:
                 
                 for row in df:
@@ -369,6 +348,8 @@ def convert_to_post(data: list) -> list:
                     'subtitle': post['asset']['name'],
                     'title': post['asset']['name']
                 }
+
+                c_compid = post['asset']['name']
         
         except Exception as err:
             print("Could not process the asset of: " + str(post))
@@ -396,7 +377,8 @@ def convert_to_post(data: list) -> list:
                     'title': 'New'
                 },
                 'c_workordertype': work_order_type,
-                'c_requesteremail': post['driver']['email']
+                'c_requesteremail': post['driver']['email'],
+                'c_compid': c_compid
             }
         }
 
@@ -414,6 +396,7 @@ def convert_to_post(data: list) -> list:
 
         # Holder for the asset sent to work order
         assetId = {}
+        c_compid = ""
 
         try: 
             if post['vehicle'] != None:
@@ -435,6 +418,8 @@ def convert_to_post(data: list) -> list:
                     'subtitle': post['vehicle']['number'],
                     'title': post['vehicle']['number'],
                 }
+
+                c_compid = post['vehicle']['number']
             else:
                 
                 for row in df:
@@ -454,6 +439,8 @@ def convert_to_post(data: list) -> list:
                     'subtitle': post['asset']['name'],
                     'title': post['asset']['name']
                 }
+
+                c_compid = post['asset']['name']
         
         except Exception as err:
             print("Could not process the asset of: " + str(post))
@@ -464,7 +451,7 @@ def convert_to_post(data: list) -> list:
             "properties": {
                 'assetId': assetId,
                 'description': ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)) if len(description) != 1 else description[0],
-                'details': f'Base Truck - {post["inspection_type"]} - ' + ' - '.join(f"Minor Issue - {desc}" for desc in under_description),
+                'details': f'Motive Base Truck - {post["inspection_type"]}: ' + ' - '.join(f"Minor Issue - {desc}" for desc in under_description),
                 'createdBy': {
                     'entity': 'UserData',
                     'id': '00000000-0000-0000-0000-000000000002', # Need to get user UUID by username
@@ -473,6 +460,8 @@ def convert_to_post(data: list) -> list:
                 },
                 'formId': 7,
                 'c_requesteremail': post['driver']['email'],
+                'c_compid': c_compid,
+                'c_requestedOn': post['time']
             }
         }
 
