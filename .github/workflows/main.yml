@@ -22,7 +22,6 @@ jobs:
         run: pip install -r requirements.txt || echo "No dependencies"
 
       - name: Run Python Script
-        run: python AutomaticWOUpload.py  # Make sure this matches your script name
         env:
           FLUKE_KEY: ${{ secrets.FLUKE_KEY }}
           MOTIVE_KEY: ${{ secrets.MOTIVE_KEY }}
@@ -30,4 +29,6 @@ jobs:
           MOTIVE_ENDPOINT: ${{ vars.MOTIVE_ENDPOINT }}
           TRUCK_IDS: ${{ vars.TRUCK_IDS }}
 
+        run: |
+          python AutomaticWOUpload.py  # Make sure this matches your script name
 

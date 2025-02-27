@@ -558,5 +558,7 @@ def main():
     for response in responses:
         print(response.json())
 
+    print("::notice::Detected Work Order Post")
+
 if __name__ == "__main__":
     main()
