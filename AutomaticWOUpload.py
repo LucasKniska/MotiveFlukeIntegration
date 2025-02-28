@@ -23,8 +23,6 @@ motive_headers = {
     "X-Api-Key": key
 }
 
-
-
 def filter_issues(inspection_data: list) -> list:
   """
   Give raw inspection data from Motive, returns a list of inspections that
@@ -77,8 +75,6 @@ def filter_issues(inspection_data: list) -> list:
 
 def new_data(inspection_data: list) -> list:
 
-    # Look into work order requests last push as well ###################################
-
     """
     Filters out the data that has already been seen and returns the new data
     
@@ -123,7 +119,6 @@ def new_data(inspection_data: list) -> list:
 
 
     url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrdersRequests/search-paged'
-    # Cookie to the sandbox
     data = {'select': [{'name': 'site'}, {'name': 'createdBy'}, {'name': 'updatedBy'}, {'name': 'updatedSyncDate'}, {'name': 'dataSource'}, {'name': 'status'}, {'name': 'createdOn'}, {'name': 'assetId'}], 'filter': {'and': [{'name': 'isDeleted', 'op': 'isfalse'}]}, 'order': [{'name': 'number', 'desc': True}], 'pageSize': 20, 'page': 0, 'fkExpansion': True}
 
     index = 1
@@ -218,7 +213,58 @@ def get_motive_data() -> list:
 
     return data
 
-def convert_to_post(data: list) -> list: 
+def getfreightlinersAndTrailers():
+    # config
+    url = 'https://torcroboticssb.us.accelix.com/api/entities/def/Assets/search-paged'
+
+    sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
+
+    headers = {'Content-Type': 'application/json', 'Cookie': sandbox_key}
+    data = {
+        "select": [
+            {"name": "c_description"},
+            {"name": "c_assettype"}
+        ],
+        "filter": {
+            "and": [
+                {"name": "isDeleted", "op": "isfalse"}
+            ]
+        },
+        "order": [
+            {"name": "c_serialnumber", "desc": True}
+        ],
+        "pageSize": 20,
+        "page": 0,
+        "fkExpansion": True
+    }
+
+    # API
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    assert response.status_code == 200
+    response = response.json()
+    dx = response['data']
+    pages = response['totalPages']
+
+    print("Getting Assets")
+
+    for page in range(1, pages):
+        data['page'] = page
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        assert response.status_code == 200
+        dx.extend(response.json()['data'])
+
+    # dataframe
+    df = pd.DataFrame(data={cx: [x[cx] for x in dx] for cx in sorted(dx[0].keys())})
+
+    filtered = []
+    for i, row in enumerate(df.iloc[:, 0]):
+
+        if "Freightliner" in row['title'] or "Trailer" in row['title']:
+            filtered.append([df.iloc[i][1], df.iloc[i][0]['id']])
+
+    return filtered
+
+def convert_to_post(data: list, df) -> list: 
     """
     Converts filtered data from motive to a format that can be posted to fluke api
     
@@ -229,80 +275,8 @@ def convert_to_post(data: list) -> list:
         list: List of inspection reports that have been converted to a format that can be posted to fluke api
     """
 
-    # Get all of the asset ids from fluke
-    def getfreightlinersAndTrailers():
-        # config
-        url = 'https://torcroboticssb.us.accelix.com/api/entities/def/Assets/search-paged'
-
-        data = {
-            "select": [
-                {"name": "c_description"},
-                {"name": "c_assettype"},
-                {"name": "id"}
-            ],
-            "filter": {
-                "and": [
-                    {"name": "isDeleted", "op": "isfalse"}
-                ]
-            },
-            "order": [
-                {"name": "c_serialnumber", "desc": True}
-            ],
-            "pageSize": 20,
-            "page": 0,
-            "fkExpansion": True
-        }
-
-        # API
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        assert response.status_code == 200
-        response = response.json()
-        dx = response['data']
-        pages = response['totalPages']
-        for page in tqdm(range(1, pages), desc='Assets'):
-            data['page'] = page
-            response = requests.post(url, headers=headers, data=json.dumps(data))
-            assert response.status_code == 200
-            dx.extend(response.json()['data'])
-
-        # dataframe
-        df = pd.DataFrame(data={cx: [x[cx] for x in dx] for cx in sorted(dx[0].keys())})
-
-        filtered = []
-        for i, row in enumerate(df.iloc[:, 0]):
-
-            if "Freightliner" in row['title'] or "Trailer" in row['title']:
-                filtered.append([df.iloc[i][1], df.iloc[i][2]])
-
-        return filtered
-    
-    # Builds work orders for Work Order
-    def buildWorkOrder(post):
-        description = []
-        under_description = []
-
-        for issue in post['issues']:
-            adding = f"{issue['notes']}"
-
-            if issue['priority'] == 'major': # puts the major issue first in the description
-                description.insert(0, issue['category'])
-                under_description.insert(0, 'Major Issue: ' + adding)
-            else:
-                description.append(issue['category'])
-                under_description.append('Minor Issue: ' + adding)
-
-        # building overall priority
-        overall_priority = {
-            'entity': 'PriorityLevels',
-            'id': '954c61fe-6f07-4c5c-8de4-b72594321c42',
-            'isDeleted': False,
-            'number': 6,
-            'title': 'Base Truck Blocking'
-        } 
-
-        # building work order type
-        work_order_type = {'entity': 'WorkOrderTypes', 'id': 'f04406fe-847e-4d49-899e-0053758d7fc3', 'isDeleted': False, 'number': 24, 'title': 'Motive Base Truck Corrective'}
-
+    # Gets id of the truck or trailer
+    def getAssetId(post):
         # Holder for the asset sent to work order
         assetId = {}
         c_compid = ""
@@ -315,7 +289,7 @@ def convert_to_post(data: list) -> list:
                         truckId = row[1]
 
                 if truckId == None:
-                    print(f'{post} is not a valid truck in fluke. Ending this post.')
+                    print(f'::notice:: {post} is not a valid truck in fluke. Ending this post.')
                     return False
 
                 assetId = {
@@ -336,7 +310,7 @@ def convert_to_post(data: list) -> list:
                         trailerId = row[1]
 
                 if trailerId == None:
-                    print(f'{post} is not a valid trailer in fluke. Ending this post.')
+                    print(f'::notice:: {post} is not a valid trailer in fluke. Ending this post.')
                     return False
 
                 assetId = {
@@ -352,139 +326,105 @@ def convert_to_post(data: list) -> list:
                 c_compid = post['asset']['name']
         
         except Exception as err:
-            print("::notice::Could not process the asset of: " + str(post))
+            print("::notice::1. Could not process the asset of: " + str(post))
             return False
+        
+        return (assetId, c_compid)
 
-        # payload for post request
-        post_data = {
-            "occurredOn": post['date'],
-            "properties": {
-                'assetId': assetId,
-                'description': ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)) if len(description) != 1 else description[0],
-                'details': f'<b>{post["inspection_type"]} Inspection:</b><br>' + (";<br>".join(f"{i+1}. {desc}" for i, desc in enumerate(under_description))),
-                'createdBy': {
-                    'entity': 'UserData',
-                    'id': '00000000-0000-0000-0000-000000000002', # Need to get user UUID by username
-                    'number': 0, # Need to get the user number
-                    'title': f"{post['driver']['last_name'].replace(',', '').title()} {post['driver']['first_name'].replace(',', '').title()} "
-                },
-                'c_priority': overall_priority,
-                'c_jobstatus': {
-                    'entity': 'JobStatus', 
-                    'id': '11111111-8588-40d2-b33d-111111111113', # UUID For New
-                    'isDeleted': False, 
-                    'number': 3, 
-                    'title': 'New'
-                },
-                'c_workordertype': work_order_type,
-                'c_requesteremail': post['driver']['email'],
-                'c_compid': c_compid
-            }
-        }
-
-        return post_data
-
-    # Builds work order for Work Order Requests
-    def buildWorkOrderRequest(post):
+    # Converts the description and notes 
+    def getDescriptionAndNotes(post):
         description = []
-        under_description = []
+        notes = []
 
         for issue in post['issues']:
             adding = f"{issue['notes']}"
 
-            description.append(issue['category'])
-            under_description.append("Minor Issue: " + adding)
-
-        # Holder for the asset sent to work order
-        assetId = {}
-        c_compid = ""
-
-        try: 
-            if post['vehicle'] != None:
-
-                for row in df:
-                    if post['vehicle']['number'] in row[0]:
-                        truckId = row[1]
-
-                if truckId == None:
-                    print(f'{post} is not a valid truck in fluke. Ending this post.')
-                    return False
-
-                assetId = {
-                    'entity': 'Assets', 
-                    'id': truckId,
-                    'image': None,
-                    'isDeleted': False,
-                    'subsubtitle': post['vehicle']['make'].title(),
-                    'subtitle': post['vehicle']['number'],
-                    'title': post['vehicle']['number'],
-                }
-
-                c_compid = post['vehicle']['number']
+            if issue['priority'] == 'major': # puts the major issue first in the description
+                description.insert(0, issue['category'])
+                notes.insert(0, 'Major Issue: ' + adding)
             else:
-                
-                for row in df:
-                    if post['asset']['name'] in row[0]:
-                        trailerId = row[1]
+                description.append(issue['category'])
+                notes.append('Minor Issue: ' + adding)
 
-                if trailerId == None:
-                    print(f'{post} is not a valid trailer in fluke. Ending this post.')
-                    return False
+        description =  ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)) if len(description) != 1 else description[0]
 
-                assetId = {
-                    'entity': 'Assets', 
-                    'id': trailerId, # Need to be able to get ids for trailer assets - use post['asset']['name']
-                    'image': None,
-                    'isDeleted': False,
-                    'subsubtitle': post['asset']['make'],
-                    'subtitle': post['asset']['name'],
-                    'title': post['asset']['name']
-                }
+ 
+        if 'major' in notes[0].lower():
+            details = f'<b>{post["inspection_type"]} Inspection:</b><br>' + (";<br>".join(f"{i+1}. {desc}" for i, desc in enumerate(notes)))
+        else:
+            details = f'<b>Motive Base Truck - {post["inspection_type"]} Inspection:</b><br>' + (";<br>".join(f"{i+1}. {desc}" for i, desc in enumerate(notes)))
 
-                c_compid = post['asset']['name']
-        
-        except Exception as err:
-            print("::notice::Could not process the asset of: " + str(post))
+        return (description, details)
+
+    # Creates the new work order payload
+    def createWorkOrder(post):
+        assetId, compid = getAssetId(post)
+
+        # If there is no asset associated with the work order then do not post it
+        if not assetId:
             return False
+        
+        description, details = getDescriptionAndNotes(post)
 
-        # payload for post request
-        post_data = {
+        if 'major' in details.lower():
+            isRequest = False
+        else:
+            isRequest = True
+
+        work_order_type = {
+            "entity": "WorkOrderTypes",
+            "id": "f04406fe-847e-4d49-899e-0053758d7fc3",
+            "isDeleted": False,
+            "number": 24,
+            "title": "Motive Base Truck Corrective",
+        }
+        job_status = {
+            "entity": "JobStatus",
+            "id": "11111111-8588-40d2-b33d-111111111113",
+            "isDeleted": False,
+            "number": 3,
+            "title": "New",
+        }
+        priority = {
+            "entity": "PriorityLevels",
+            "id": "954c61fe-6f07-4c5c-8de4-b72594321c42",
+            "isDeleted": False,
+            "number": 6,
+            "title": "Base Truck Blocking",
+        }
+
+        base_payload = {
             "properties": {
-                'assetId': assetId,
-                'description': ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)) if len(description) != 1 else description[0],
-                'details': f'<b>Motive Base Truck - {post["inspection_type"]}:</b><br>' + (";<br>".join(f"{i+1}. {desc}" for i, desc in enumerate(under_description))),
-                'createdBy': {
-                    'entity': 'UserData',
-                    'id': '00000000-0000-0000-0000-000000000002', # Need to get user UUID by username
-                    'number': 0, # Need to get the user number
-                    'title': f"{post['driver']['last_name'].replace(',', '').title()} {post['driver']['first_name'].replace(',', '').title()} "
+                "assetId": assetId,
+                "description": description,
+                "details": details,
+                "createdBy": {
+                    "entity": "UserData",
+                    "id": "00000000-0000-0000-0000-000000000002",
+                    "number": 0,
+                    "title": f"{post['driver']['last_name'].title()} {post['driver']['first_name'].title()}",
                 },
-                'formId': 7,
-                'c_requesteremail': post['driver']['email'],
-                'c_compid': c_compid,
-                'c_requestedOn': post['date']
+                "c_requesteremail": post["driver"]["email"],
+                "c_compid": compid,
             }
         }
 
-        return post_data
+        # Should go to work orders requests
+        if isRequest:
+            base_payload["properties"]["formId"] = 7
+            base_payload["properties"]["c_requestedOn"] = post["date"]
+        else:
+            base_payload["occurredOn"] = post['date']
+            base_payload['properties'].update({'c_priority': priority, 'c_jobstatus': job_status, 'c_workordertype': work_order_type})
 
-    df = getfreightlinersAndTrailers()
+        return base_payload
 
+    # The motive issues converted to fluke payloads
     converted_data = []
     
     # For every truck that needs a post
     for post in data: 
-
-        useWorkOrderRequest = True
-        # If there is a major issue than switch to basic Work Orders
-        for issue in post['issues']:
-            if issue['priority'] == 'major': # puts the major issue first in the description
-                useWorkOrderRequest = False
-
-        if(useWorkOrderRequest):
-            post_data = buildWorkOrderRequest(post)
-        else:
-            post_data = buildWorkOrder(post)
+        post_data = createWorkOrder(post)
 
         if(post_data != False):
             converted_data.append(post_data)
@@ -511,7 +451,6 @@ def post_WO(data: list) -> list:
     responses = []
     # Send a post request with the data
     for work_order in data:
-        
         endpoint = ""
         if 'major' in work_order['properties']['details'].lower():
             endpoint = woEndpoint
@@ -543,12 +482,21 @@ def main():
     # returns a list of recent inspection reports that had major or minor issues
     data = get_motive_data()
     
+    # only continues if there is an inspection report to upload
     if len(data) == 0:
         print("No new data.")
         return
 
+    # Get all of the assets
+    df = getfreightlinersAndTrailers()
+
+    # Get motive data again
+    # Getting the freightliners takes 30 seconds, get data after to ensure getting all of the inspection reports
+    # Does not take much time at all; not bad to call it twice => if we only call it after then getting asset ids everytime for no reason
+    data = get_motive_data()
+
     # converts the previous data list to a list that can be posted to fluke api
-    WO_posts = convert_to_post(data)
+    WO_posts = convert_to_post(data, df)
 
     # posts work orders to fluke and returns the responses
     responses = post_WO(WO_posts)
@@ -556,6 +504,7 @@ def main():
     # Saves work order to csv file during testing
     # test_save(WO_posts)
 
+    # All of the responses of uploaded work orders
     for response in responses:
         print(response.json())
 
