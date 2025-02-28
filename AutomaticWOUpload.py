@@ -285,11 +285,11 @@ def convert_to_post(data: list) -> list:
             adding = f"{issue['notes']}"
 
             if issue['priority'] == 'major': # puts the major issue first in the description
-                description.insert(0, "Major Issue - " + issue['category'])
-                under_description.insert(0, adding)
+                description.insert(0, issue['category'])
+                under_description.insert(0, 'Major Issue: ' + adding)
             else:
-                description.append("Minor Issue - " + issue['category'])
-                under_description.append(adding)
+                description.append(issue['category'])
+                under_description.append('Minor Issue: ' + adding)
 
         # building overall priority
         overall_priority = {
@@ -352,7 +352,7 @@ def convert_to_post(data: list) -> list:
                 c_compid = post['asset']['name']
         
         except Exception as err:
-            print("Could not process the asset of: " + str(post))
+            print("::notice::Could not process the asset of: " + str(post))
             return False
 
         # payload for post request
@@ -361,7 +361,7 @@ def convert_to_post(data: list) -> list:
             "properties": {
                 'assetId': assetId,
                 'description': ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)) if len(description) != 1 else description[0],
-                'details': post['inspection_type'] + ' Inspection\n' + ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(under_description)) if len(description) != 1 else post['inspection_type'] + ' Inspection\n' + under_description[0],
+                'details': f'<b>{post["inspection_type"]} Inspection:</b><br>' + (";<br>".join(f"{i+1}. {desc}" for i, desc in enumerate(under_description))),
                 'createdBy': {
                     'entity': 'UserData',
                     'id': '00000000-0000-0000-0000-000000000002', # Need to get user UUID by username
@@ -384,6 +384,7 @@ def convert_to_post(data: list) -> list:
 
         return post_data
 
+    # Builds work order for Work Order Requests
     def buildWorkOrderRequest(post):
         description = []
         under_description = []
@@ -392,7 +393,7 @@ def convert_to_post(data: list) -> list:
             adding = f"{issue['notes']}"
 
             description.append(issue['category'])
-            under_description.append(adding)
+            under_description.append("Minor Issue: " + adding)
 
         # Holder for the asset sent to work order
         assetId = {}
@@ -443,7 +444,7 @@ def convert_to_post(data: list) -> list:
                 c_compid = post['asset']['name']
         
         except Exception as err:
-            print("Could not process the asset of: " + str(post))
+            print("::notice::Could not process the asset of: " + str(post))
             return False
 
         # payload for post request
@@ -451,7 +452,7 @@ def convert_to_post(data: list) -> list:
             "properties": {
                 'assetId': assetId,
                 'description': ", ".join(f"{i+1}. {desc}" for i, desc in enumerate(description)) if len(description) != 1 else description[0],
-                'details': f'Motive Base Truck - {post["inspection_type"]}: ' + ' - '.join(f"Minor Issue - {desc}" for desc in under_description),
+                'details': f'<b>Motive Base Truck - {post["inspection_type"]}:</b><br>' + (";<br>".join(f"{i+1}. {desc}" for i, desc in enumerate(under_description))),
                 'createdBy': {
                     'entity': 'UserData',
                     'id': '00000000-0000-0000-0000-000000000002', # Need to get user UUID by username
@@ -461,7 +462,7 @@ def convert_to_post(data: list) -> list:
                 'formId': 7,
                 'c_requesteremail': post['driver']['email'],
                 'c_compid': c_compid,
-                'c_requestedOn': post['time']
+                'c_requestedOn': post['date']
             }
         }
 
