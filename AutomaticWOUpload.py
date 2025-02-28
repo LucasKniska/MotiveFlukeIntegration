@@ -513,7 +513,7 @@ def post_WO(data: list) -> list:
     for work_order in data:
         
         endpoint = ""
-        if 'major' in work_order['properties']['description'].lower():
+        if 'major' in work_order['properties']['details'].lower():
             endpoint = woEndpoint
         else:
             endpoint = worEndpoint
