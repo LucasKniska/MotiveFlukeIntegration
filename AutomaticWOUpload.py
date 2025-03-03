@@ -6,7 +6,6 @@ from datetime import datetime, timedelta, timezone
 from tqdm import tqdm
 import os
 
-
 # Cookie to the sandbox
 sandbox_key = os.getenv("FLUKE_KEY")
 
@@ -223,7 +222,8 @@ def getfreightlinersAndTrailers():
     data = {
         "select": [
             {"name": "c_description"},
-            {"name": "c_assettype"}
+            {"name": "c_assettype"},
+            {"name": "id"}
         ],
         "filter": {
             "and": [
@@ -260,7 +260,7 @@ def getfreightlinersAndTrailers():
     for i, row in enumerate(df.iloc[:, 0]):
 
         if "Freightliner" in row['title'] or "Trailer" in row['title']:
-            filtered.append([df.iloc[i][1], df.iloc[i][0]['id']])
+            filtered.append([df.iloc[i]['c_description'], df.iloc[i]['id']])
 
     return filtered
 
