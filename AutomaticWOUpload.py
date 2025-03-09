@@ -8,6 +8,7 @@ import os
 
 # Cookie to the sandbox
 sandbox_key = os.getenv("FLUKE_KEY")
+sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
 
 headers = {
     "Content-Type": "application/json", 
@@ -16,6 +17,7 @@ headers = {
 
 # Environment variables from GitHub
 key = os.getenv("MOTIVE_KEY")
+key = "9e90504a-82f0-4ed4-b54c-ce37f388f211"
 
 motive_headers = {
     "accept": "application/json", 
@@ -72,6 +74,7 @@ def filter_issues(inspection_data: list) -> list:
 
   return important_issues
 
+
 def new_data(inspection_data: list) -> list:
 
     """
@@ -88,50 +91,58 @@ def new_data(inspection_data: list) -> list:
     url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrders/search-paged'
 
     # Cookie to the sandbox
-    data = {'select': [{'name': 'site'}, {'name': 'createdBy'}, {'name': 'updatedBy'}, {'name': 'updatedSyncDate'}, {'name': 'dataSource'}, {'name': 'status'}, {'name': 'closedOn'}, {'name': 'openedOn'}, {'name': 'startDate'}, {'name': 'assetId'}, {'name': 'requestId'}, {'name': 'scheduledEventId'}, {'name': 'description'}, {'name': 'details'}, {'name': 'taskId'}, {'name': 'priorityCode'}, {'name': 'rimeRanking'}, {'name': 'signature'}, {'name': 'image'}, {'name': 'geolocation'}, {'name': 'reason'}, {'name': 'parentId'}, {'name': 'c_workordertype'}, {'name': 'c_jobstatus'}, {'name': 'c_priority'}, {'name': 'c_completedon'}, {'name': 'c_projectid'}, {'name': 'c_problemtype'}, {'name': 'c_estimatedhours'}, {'name': 'c_downtime'}, {'name': 'c_comments'}, {'name': 'c_completeddate'}, {'name': 'c_failurecode'}, {'name': 'c_issuecode'}, {'name': 'c_department'}, {'name': 'c_linenumber'}, {'name': 'c_availablestatus'}, {'name': 'c_completedby'}, {'name': 'c_closedby'}, {'name': 'c_requestedon'}, {'name': 'c_requesteremail'}, {'name': 'c_site'}, {'name': 'c_building'}, {'name': 'c_imagefield'}, {'name': 'c_floorlevel'}, {'name': 'c_requesterphone'}, {'name': 'c_compid'}, {'name': 'c_onholdreason'}, {'name': 'c_assetmountingposition'}, {'name': 'c_assettypesymptom'}, {'name': 'c_symptom'}, {'name': 'c_foreignkeylookupsymptom'}, {'name': 'c_terminalzone'}, {'name': 'c_downtimestart'}, {'name': 'c_downtimeend'}, {'name': 'c_repairtimehrs'}, {'name': 'c_repairtimestart'}, {'name': 'c_repairtimeend'}, {'name': 'c_location'}, {'name': 'c_documentlink'}, {'name': 'c_symptomassettypediagnosis'}, {'name': 'c_locationdiagnosis'}, {'name': 'c_diagnosis'}, {'name': 'c_documentlinkdiagnosis'}, {'name': 'c_parentasset'}, {'name': 'c_maintenancelog'}, {'name': 'c_parentassetdescription'}, {'name': 'c_firmware'}, {'name': 'c_deploymentsoftware'}, {'name': 'c_assettypeasset'}, {'name': 'c_tasknumber'}, {'name': 'id'}, {'name': 'number'}, {'name': 'createdOn'}, {'name': 'updatedOn'}], 'filter': {'and': [{'name': 'isDeleted', 'op': 'isfalse'}]}, 'order': [{'name': 'number', 'desc': True}], 'pageSize': 20, 'page': 0, 'fkExpansion': True}
+    data = {
+        'select': 
+            [{'name': 'openedOn'}, {'name': 'c_priority'}, {'name': 'assetId'}], 
+        'filter': {
+            'and': [
+                {"name": "c_priority", "op": "eq", "value": "Base Truck Blocking"},
+            ],
+        }, 
+        'order': [{'name': 'number', 'desc': True}], 'pageSize': 1, 'page': 0, 'fkExpansion': True
+    }
 
-    # Check the data from work orders for latest
-    index = 1
-    latestBaseTruckWO = None
-    while(latestBaseTruckWO == None):
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    # The data is filtered to get only the 1 latest base truck blocking 
+    lastMajorBaseTruck = response.json()['data'][0]['openedOn']
 
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        assert response.status_code == 200
-        response = response.json()
-        dx = response['data']
+    # Cookie to the sandbox
+    data = {
+        'select': 
+            [{'name': 'openedOn'}, {'name': 'c_priority'}, {'name': 'assetId'}], 
+        'filter': {
+            'and': [
+                {"name": "c_priority", "op": "eq", "value": "Base Truck Non-Blocking"},
+            ],
+        }, 
+        'order': [{'name': 'number', 'desc': True}], 'pageSize': 1, 'page': 0, 'fkExpansion': True
+    }
 
-        data['page'] = index
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        assert response.status_code == 200
-        dx.extend(response.json()['data'])
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    # The data is filtered to get only the 1 latest base truck nonblocking 
+    lastMinorBaseTruck = response.json()['data'][0]['openedOn']
 
-        # dataframe
-        df = pd.DataFrame(data={cx: [x[cx] for x in dx] for cx in sorted(dx[0].keys())})
+    lastMajorBaseTruck = parser.isoparse(lastMajorBaseTruck)
+    lastMinorBaseTruck = parser.isoparse(lastMinorBaseTruck)
 
-        # get most recent base truck error
-        for i in range(df.shape[0]):
-            if(df.get("c_priority")[i] != None and df.get("c_priority")[i].get("title")[0:10] == "Base Truck"):
-                latestBaseTruckWO = df.get("openedOn")[i]
-                break # If latestDate comes from a base truck work order than use that one
+    # Greater means more recent => gets the most recent motive converted to eMaint post
+    if(lastMinorBaseTruck > lastMajorBaseTruck):
+        latestBaseTruckWO = lastMinorBaseTruck
+    else:
+        latestBaseTruckWO = lastMajorBaseTruck
 
-        index += 1
-
-
+    # Getting the work orders requests latest upload from motive
     url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrdersRequests/search-paged'
-    data = {'select': [{'name': 'site'}, {'name': 'createdBy'}, {'name': 'updatedBy'}, {'name': 'updatedSyncDate'}, {'name': 'dataSource'}, {'name': 'status'}, {'name': 'createdOn'}, {'name': 'assetId'}], 'filter': {'and': [{'name': 'isDeleted', 'op': 'isfalse'}]}, 'order': [{'name': 'number', 'desc': True}], 'pageSize': 20, 'page': 0, 'fkExpansion': True}
+    # Cookie to the sandbox
+    data = {'select': [{'name': 'site'}, {'name': 'createdBy'}, {'name': 'updatedBy'}, {'name': 'updatedSyncDate'}, {'name': 'dataSource'}, {'name': 'status'}, {'name': 'createdOn'}, {'name': 'assetId'}], 'filter': {'and': [{'name': 'isDeleted', 'op': 'isfalse'}]}, 'order': [{'name': 'number', 'desc': True}], 'pageSize': 50, 'page': 0, 'fkExpansion': True}
 
-    index = 1
+    index = 0
     latestWORequest = None
     while(latestWORequest == None):
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        assert response.status_code == 200
-        response = response.json()
-        dx = response['data']
-
         data['page'] = index
         response = requests.post(url, headers=headers, data=json.dumps(data))
         assert response.status_code == 200
-        dx.extend(response.json()['data'])
+        dx = response.json()['data']
 
         # dataframe
         df = pd.DataFrame(data={cx: [x[cx] for x in dx] for cx in sorted(dx[0].keys())})
@@ -144,12 +155,15 @@ def new_data(inspection_data: list) -> list:
 
         index += 1
     
-    latestFlukeUpload = parser.isoparse(latestBaseTruckWO)
     latestFlukeWORUpload = parser.isoparse(latestWORequest)
 
-    if(latestFlukeUpload < latestFlukeWORUpload):
+    # Gets the latest upload made by this system
+    if(latestBaseTruckWO < latestFlukeWORUpload):
         latestFlukeUpload = latestFlukeWORUpload
-
+        print("Latest is from Work Order Requests: ", latestFlukeUpload)
+    else:
+        latestFlukeUpload = latestBaseTruckWO
+        print("Latest is from Work Orders: ", latestFlukeUpload)
 
     # Checks if the new data has already been processed
     filter_data = []
@@ -163,6 +177,7 @@ def new_data(inspection_data: list) -> list:
 
     return filter_data
 
+
 def get_motive_data() -> list:
     """
     Gets the data of inspection reports within the last day from motive API and returns the filtered data. Filtered data is ones with a issue to request a work order for and that have not already been posted to fluke. 
@@ -174,6 +189,7 @@ def get_motive_data() -> list:
     # Gets all of the issues within the past 24 hours
     index = 1
     issues = []
+    # Can only go to the 5th page from motive
     while len(issues) <= 5: 
         # end point for motive's truck status data, gets most recent inspection report
         motive = f"https://api.keeptruckin.com/v2/inspection_reports?per_page=50&page_no={index}"
@@ -185,7 +201,8 @@ def get_motive_data() -> list:
 
         issues = issues + new_issues
 
-        time = str(response.json()['inspection_reports'][0]['inspection_report']['time'])
+        # Gets the time from the earliest inspection report in that batch 
+        time = str(response.json()['inspection_reports'][-1]['inspection_report']['time'])
         time = datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
 
         # Get current time in UTC
@@ -193,11 +210,9 @@ def get_motive_data() -> list:
         past_24_hours = now - timedelta(days=1)
 
         # Check if the given time is within the past 24 hours
-        if past_24_hours <= time <= now:
-            pass
-        else:
+        # Greater than represents more recent (further in the future is bigger)
+        if past_24_hours > time:
             break
-        
             
         try: 
             print(str(len(issues)) + " " + str(index) + " " + str(response.json()['inspection_reports'][0]['inspection_report']['time']))
@@ -206,19 +221,15 @@ def get_motive_data() -> list:
             break
         index += 1
 
-    data = issues
-
-    data = new_data(data)
+    # Makes sure the data is new compared to last uploaded fluke data
+    data = new_data(issues)
 
     return data
 
 def getfreightlinersAndTrailers():
-    # config
+    # Get the freightliner assets
     url = 'https://torcroboticssb.us.accelix.com/api/entities/def/Assets/search-paged'
 
-    sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
-
-    headers = {'Content-Type': 'application/json', 'Cookie': sandbox_key}
     data = {
         "select": [
             {"name": "c_description"},
@@ -227,12 +238,11 @@ def getfreightlinersAndTrailers():
         ],
         "filter": {
             "and": [
-                {"name": "isDeleted", "op": "isfalse"}
-            ]
+                {"name": "isDeleted", "op": "isfalse"},
+                {"name": "c_assettype", "op": "eq", "value": "Freightliner"},
+            ],
         },
-        "order": [
-            {"name": "c_serialnumber", "desc": True}
-        ],
+        "order": [],
         "pageSize": 20,
         "page": 0,
         "fkExpansion": True
@@ -244,9 +254,39 @@ def getfreightlinersAndTrailers():
     response = response.json()
     dx = response['data']
     pages = response['totalPages']
+    for page in range(1, pages):
+        data['page'] = page
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        assert response.status_code == 200
+        dx.extend(response.json()['data'])
 
-    print("Getting Assets")
+    # Get the trailer assets
+    url = 'https://torcroboticssb.us.accelix.com/api/entities/def/Assets/search-paged'
 
+    data = {
+        "select": [
+            {"name": "c_description"},
+            {"name": "c_assettype"},
+            {"name": "id"}
+        ],
+        "filter": {
+            "and": [
+                {"name": "isDeleted", "op": "isfalse"},
+                {"name": "c_assettype", "op": "eq", "value": "Trailer"},
+            ],
+        },
+        "order": [],
+        "pageSize": 20,
+        "page": 0,
+        "fkExpansion": True
+    }
+
+    # API
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    assert response.status_code == 200
+    response = response.json()
+    dx.extend(response['data'])
+    pages = response['totalPages']
     for page in range(1, pages):
         data['page'] = page
         response = requests.post(url, headers=headers, data=json.dumps(data))
@@ -256,13 +296,8 @@ def getfreightlinersAndTrailers():
     # dataframe
     df = pd.DataFrame(data={cx: [x[cx] for x in dx] for cx in sorted(dx[0].keys())})
 
-    filtered = []
-    for i, row in enumerate(df.iloc[:, 0]):
+    return df
 
-        if "Freightliner" in row['title'] or "Trailer" in row['title']:
-            filtered.append([df.iloc[i]['c_description'], df.iloc[i]['id']])
-
-    return filtered
 
 def convert_to_post(data: list, df) -> list: 
     """
@@ -284,13 +319,15 @@ def convert_to_post(data: list, df) -> list:
         try: 
             if post['vehicle'] != None:
 
-                for row in df:
-                    if post['vehicle']['number'] in row[0]:
-                        truckId = row[1]
+                truckId = None
+                for i, row in df.iterrows():
+                    if post['vehicle']['number'] in row['c_description']:
+                        truckId = row['id']
+                        break
 
                 if truckId == None:
-                    print(f'::notice:: {post} is not a valid truck in fluke. Ending this post.')
-                    return False
+                    print(f'::notice:: This is not a valid truck in fluke. Ending this post. {post}')
+                    return (False, False)
 
                 assetId = {
                     'entity': 'Assets', 
@@ -303,15 +340,16 @@ def convert_to_post(data: list, df) -> list:
                 }
 
                 c_compid = post['vehicle']['number']
+            
             else:
-                
+                trailerId = None
                 for row in df:
                     if post['asset']['name'] in row[0]:
                         trailerId = row[1]
 
                 if trailerId == None:
-                    print(f'::notice:: {post} is not a valid trailer in fluke. Ending this post.')
-                    return False
+                    print(f'::notice:: This is not a valid trailer in fluke. Ending this post. {post}')
+                    return (False, False)
 
                 assetId = {
                     'entity': 'Assets', 
@@ -326,8 +364,8 @@ def convert_to_post(data: list, df) -> list:
                 c_compid = post['asset']['name']
         
         except Exception as err:
-            print("::notice::1. Could not process the asset of: " + str(post))
-            return False
+            print("::notice:: Could not process the asset of: " + str(post))
+            return (False, False)
         
         return (assetId, c_compid)
 
@@ -431,6 +469,7 @@ def convert_to_post(data: list, df) -> list:
 
     return converted_data
 
+
 def post_WO(data: list) -> list:
     """
     Posts the work orders to fluke api and returns the responses
@@ -479,13 +518,6 @@ def main():
     """
     Main loop that checks for new inspection reports from motive and posts them to fluke (or saves them to a csv file during testing)
     """
-    # returns a list of recent inspection reports that had major or minor issues
-    data = get_motive_data()
-    
-    # only continues if there is an inspection report to upload
-    if len(data) == 0:
-        print("No new data.")
-        return
 
     # Get all of the assets
     df = getfreightlinersAndTrailers()
@@ -494,6 +526,11 @@ def main():
     # Getting the freightliners takes 30 seconds, get data after to ensure getting all of the inspection reports
     # Does not take much time at all; not bad to call it twice => if we only call it after then getting asset ids everytime for no reason
     data = get_motive_data()
+
+    # only continues if there is an inspection report to upload
+    if len(data) == 0:
+        print("No new data.")
+        return
 
     # converts the previous data list to a list that can be posted to fluke api
     WO_posts = convert_to_post(data, df)
