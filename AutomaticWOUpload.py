@@ -8,7 +8,6 @@ import os
 
 # Cookie to the sandbox
 sandbox_key = os.getenv("FLUKE_KEY")
-sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
 
 headers = {
     "Content-Type": "application/json", 
@@ -17,7 +16,6 @@ headers = {
 
 # Environment variables from GitHub
 key = os.getenv("MOTIVE_KEY")
-key = "9e90504a-82f0-4ed4-b54c-ce37f388f211"
 
 motive_headers = {
     "accept": "application/json", 
