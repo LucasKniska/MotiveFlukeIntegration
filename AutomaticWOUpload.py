@@ -8,6 +8,7 @@ import os
 
 # Cookie to the sandbox
 sandbox_key = os.getenv("FLUKE_KEY")
+sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
 
 headers = {
     "Content-Type": "application/json", 
@@ -16,15 +17,111 @@ headers = {
 
 # Environment variables from GitHub
 key = os.getenv("MOTIVE_KEY")
-
+key = "9e90504a-82f0-4ed4-b54c-ce37f388f211"
 motive_headers = {
     "accept": "application/json", 
     "X-Api-Key": key
 }
 
-def filter_issues(inspection_data: list) -> list:
+
+def getFreightlinersAndTrailers() -> pd.DataFrame:
+    """
+    Gets all of the freightliners and trailer assets from fluke.
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the following columns for each asset:
+            - 'c_description': Number of the truck (ex: C19 - Mill Mountain).
+            - 'c_assettype': The type of the asset (either 'Freightliner' or 'Trailer').
+            - 'id': The unique identifier of the asset.
+
+    """
+
+    print("Getting Asset Information")
+    # Get the freightliner assets
+    url = 'https://torcroboticssb.us.accelix.com/api/entities/def/Assets/search-paged'
+
+    data = {
+        "select": [
+            {"name": "c_description"},
+            {"name": "c_assettype"},
+            {"name": "id"}
+        ],
+        "filter": {
+            "and": [
+                {"name": "isDeleted", "op": "isfalse"},
+                {"name": "c_assettype", "op": "eq", "value": "Freightliner"},
+            ],
+        },
+        "order": [],
+        "pageSize": 50,
+        "page": 0,
+        "fkExpansion": True
+    }
+
+    # API
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    
+    if response.status_code != 200:
+        print("Error getting Freightliners")
+        return False
+    
+    response = response.json()
+    dx = response['data']
+    pages = response['totalPages']
+    for page in range(1, pages):
+        data['page'] = page
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        if response.status_code != 200:
+            print("Error getting Freightliners")
+            return False
+        dx.extend(response.json()['data'])
+
+    # Get the trailer assets
+    url = 'https://torcroboticssb.us.accelix.com/api/entities/def/Assets/search-paged'
+
+    data = {
+        "select": [
+            {"name": "c_description"},
+            {"name": "c_assettype"},
+            {"name": "id"}
+        ],
+        "filter": {
+            "and": [
+                {"name": "isDeleted", "op": "isfalse"},
+                {"name": "c_assettype", "op": "eq", "value": "Trailer"},
+            ],
+        },
+        "order": [],
+        "pageSize": 50,
+        "page": 0,
+        "fkExpansion": True
+    }
+
+    # API
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    if response.status_code != 200:
+        print("Error getting Trailers")
+        return False
+    response = response.json()
+    dx.extend(response['data'])
+    pages = response['totalPages']
+    for page in range(1, pages):
+        data['page'] = page
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        if response.status_code != 200:
+            print("Error getting Trailers")
+            return False
+        dx.extend(response.json()['data'])
+
+    # dataframe
+    df = pd.DataFrame(data={cx: [x[cx] for x in dx] for cx in sorted(dx[0].keys())})
+
+    return df
+
+
+def filterIssues(inspection_data: list) -> list:
   """
-  Give raw inspection data from Motive, returns a list of inspections that
+  Given raw inspection data from Motive, returns a list of inspections that
   only contain issues with the truck. 
 
   Args:
@@ -73,8 +170,7 @@ def filter_issues(inspection_data: list) -> list:
   return important_issues
 
 
-def new_data(inspection_data: list) -> list:
-
+def checkNewData(inspection_data: list) -> list:
     """
     Filters out the data that has already been seen and returns the new data
     
@@ -101,6 +197,11 @@ def new_data(inspection_data: list) -> list:
     }
 
     response = requests.post(url, headers=headers, data=json.dumps(data))
+    
+    if response.status_code != 200:
+        print("Error getting Work Orders Major Issues")
+        return False
+
     # The data is filtered to get only the 1 latest base truck blocking 
     lastMajorBaseTruck = response.json()['data'][0]['openedOn']
 
@@ -117,6 +218,11 @@ def new_data(inspection_data: list) -> list:
     }
 
     response = requests.post(url, headers=headers, data=json.dumps(data))
+    
+    if response.status_code != 200:
+        print("Error getting Work Order Minor Issues")
+        return False
+    
     # The data is filtered to get only the 1 latest base truck nonblocking 
     lastMinorBaseTruck = response.json()['data'][0]['openedOn']
 
@@ -139,7 +245,10 @@ def new_data(inspection_data: list) -> list:
     while(latestWORequest == None):
         data['page'] = index
         response = requests.post(url, headers=headers, data=json.dumps(data))
-        assert response.status_code == 200
+        if response.status_code != 200:
+            print("Error getting Work Order Requests")
+            return False
+        
         dx = response.json()['data']
 
         # dataframe
@@ -176,7 +285,7 @@ def new_data(inspection_data: list) -> list:
     return filter_data
 
 
-def get_motive_data() -> list:
+def getMotiveData() -> list:
     """
     Gets the data of inspection reports within the last day from motive API and returns the filtered data. Filtered data is ones with a issue to request a work order for and that have not already been posted to fluke. 
 
@@ -188,14 +297,18 @@ def get_motive_data() -> list:
     index = 1
     issues = []
     # Can only go to the 5th page from motive
-    while len(issues) <= 5: 
+    while index <= 5: 
         # end point for motive's truck status data, gets most recent inspection report
         motive = f"https://api.keeptruckin.com/v2/inspection_reports?per_page=50&page_no={index}"
 
         # get truck status data
         response = requests.get(motive, headers=motive_headers)
 
-        new_issues = filter_issues(response.json())
+        if response.status_code != 200:
+            print("Error getting Motive Data")
+            return False
+
+        new_issues = filterIssues(response.json())
 
         issues = issues + new_issues
 
@@ -213,91 +326,22 @@ def get_motive_data() -> list:
             break
             
         try: 
-            print(str(len(issues)) + " " + str(index) + " " + str(response.json()['inspection_reports'][0]['inspection_report']['time']))
+            str(len(issues)) + " " + str(index) + " " + str(response.json()['inspection_reports'][0]['inspection_report']['time'])
         except:
             print(response.json())
             break
         index += 1
 
     # Makes sure the data is new compared to last uploaded fluke data
-    data = new_data(issues)
+    data = checkNewData(issues)
+
+    if data == False:
+        return False
 
     return data
 
-def getfreightlinersAndTrailers():
-    # Get the freightliner assets
-    url = 'https://torcroboticssb.us.accelix.com/api/entities/def/Assets/search-paged'
 
-    data = {
-        "select": [
-            {"name": "c_description"},
-            {"name": "c_assettype"},
-            {"name": "id"}
-        ],
-        "filter": {
-            "and": [
-                {"name": "isDeleted", "op": "isfalse"},
-                {"name": "c_assettype", "op": "eq", "value": "Freightliner"},
-            ],
-        },
-        "order": [],
-        "pageSize": 20,
-        "page": 0,
-        "fkExpansion": True
-    }
-
-    # API
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    assert response.status_code == 200
-    response = response.json()
-    dx = response['data']
-    pages = response['totalPages']
-    for page in range(1, pages):
-        data['page'] = page
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        assert response.status_code == 200
-        dx.extend(response.json()['data'])
-
-    # Get the trailer assets
-    url = 'https://torcroboticssb.us.accelix.com/api/entities/def/Assets/search-paged'
-
-    data = {
-        "select": [
-            {"name": "c_description"},
-            {"name": "c_assettype"},
-            {"name": "id"}
-        ],
-        "filter": {
-            "and": [
-                {"name": "isDeleted", "op": "isfalse"},
-                {"name": "c_assettype", "op": "eq", "value": "Trailer"},
-            ],
-        },
-        "order": [],
-        "pageSize": 20,
-        "page": 0,
-        "fkExpansion": True
-    }
-
-    # API
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    assert response.status_code == 200
-    response = response.json()
-    dx.extend(response['data'])
-    pages = response['totalPages']
-    for page in range(1, pages):
-        data['page'] = page
-        response = requests.post(url, headers=headers, data=json.dumps(data))
-        assert response.status_code == 200
-        dx.extend(response.json()['data'])
-
-    # dataframe
-    df = pd.DataFrame(data={cx: [x[cx] for x in dx] for cx in sorted(dx[0].keys())})
-
-    return df
-
-
-def convert_to_post(data: list, df) -> list: 
+def convertToPost(data: list, df) -> list: 
     """
     Converts filtered data from motive to a format that can be posted to fluke api
     
@@ -468,7 +512,7 @@ def convert_to_post(data: list, df) -> list:
     return converted_data
 
 
-def post_WO(data: list) -> list:
+def postWorkOrders(data: list) -> list:
     """
     Posts the work orders to fluke api and returns the responses
 
@@ -499,18 +543,6 @@ def post_WO(data: list) -> list:
 
     return responses
 
-def test_save(data: list):
-    """
-    When testing, declares what data that would be posted to fluke
-
-    Args:
-        data (list): List of inspection reports converted to a format that can be posted to fluke api
-    """
-
-    # Save the data for testing purposes
-    with open ('test_data.txt', 'w') as f:
-        for post in data:
-            f.write(str(post) + "\n")
 
 def main():
     """
@@ -518,12 +550,23 @@ def main():
     """
 
     # Get all of the assets
-    df = getfreightlinersAndTrailers()
+    df = getFreightlinersAndTrailers()
+
+    # Makes sure a dataframe is returned, and an error did not happen
+    try: 
+        if df == False:
+            return
+    except:
+        pass
 
     # Get motive data again
     # Getting the freightliners takes 30 seconds, get data after to ensure getting all of the inspection reports
     # Does not take much time at all; not bad to call it twice => if we only call it after then getting asset ids everytime for no reason
-    data = get_motive_data()
+    data = getMotiveData()
+
+    # Only continue if Motive Data was gathered succesfully 
+    if data == False:
+        return
 
     # only continues if there is an inspection report to upload
     if len(data) == 0:
@@ -531,13 +574,10 @@ def main():
         return
 
     # converts the previous data list to a list that can be posted to fluke api
-    WO_posts = convert_to_post(data, df)
+    WO_posts = convertToPost(data, df)
 
     # posts work orders to fluke and returns the responses
-    responses = post_WO(WO_posts)
-
-    # Saves work order to csv file during testing
-    # test_save(WO_posts)
+    responses = postWorkOrders(WO_posts)
 
     # All of the responses of uploaded work orders
     for response in responses:
