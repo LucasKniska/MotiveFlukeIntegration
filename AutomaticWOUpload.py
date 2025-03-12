@@ -8,8 +8,6 @@ import os
 
 # Cookie to the sandbox
 sandbox_key = os.getenv("FLUKE_KEY")
-sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
-
 headers = {
     "Content-Type": "application/json", 
     "Cookie": sandbox_key
@@ -17,7 +15,6 @@ headers = {
 
 # Environment variables from GitHub
 key = os.getenv("MOTIVE_KEY")
-key = "9e90504a-82f0-4ed4-b54c-ce37f388f211"
 motive_headers = {
     "accept": "application/json", 
     "X-Api-Key": key
@@ -204,36 +201,9 @@ def checkNewData(inspection_data: list) -> list:
 
     # The data is filtered to get only the 1 latest base truck blocking 
     lastMajorBaseTruck = response.json()['data'][0]['openedOn']
-
-    # Cookie to the sandbox
-    data = {
-        'select': 
-            [{'name': 'openedOn'}, {'name': 'c_priority'}, {'name': 'assetId'}], 
-        'filter': {
-            'and': [
-                {"name": "c_priority", "op": "eq", "value": "Base Truck Non-Blocking"},
-            ],
-        }, 
-        'order': [{'name': 'number', 'desc': True}], 'pageSize': 1, 'page': 0, 'fkExpansion': True
-    }
-
-    response = requests.post(url, headers=headers, data=json.dumps(data))
-    
-    if response.status_code != 200:
-        print("Error getting Work Order Minor Issues")
-        return False
     
     # The data is filtered to get only the 1 latest base truck nonblocking 
-    lastMinorBaseTruck = response.json()['data'][0]['openedOn']
-
     lastMajorBaseTruck = parser.isoparse(lastMajorBaseTruck)
-    lastMinorBaseTruck = parser.isoparse(lastMinorBaseTruck)
-
-    # Greater means more recent => gets the most recent motive converted to eMaint post
-    if(lastMinorBaseTruck > lastMajorBaseTruck):
-        latestBaseTruckWO = lastMinorBaseTruck
-    else:
-        latestBaseTruckWO = lastMajorBaseTruck
 
     # Getting the work orders requests latest upload from motive
     url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrdersRequests/search-paged'
@@ -241,8 +211,8 @@ def checkNewData(inspection_data: list) -> list:
     data = {'select': [{'name': 'site'}, {'name': 'createdBy'}, {'name': 'updatedBy'}, {'name': 'updatedSyncDate'}, {'name': 'dataSource'}, {'name': 'status'}, {'name': 'createdOn'}, {'name': 'assetId'}], 'filter': {'and': [{'name': 'isDeleted', 'op': 'isfalse'}]}, 'order': [{'name': 'number', 'desc': True}], 'pageSize': 50, 'page': 0, 'fkExpansion': True}
 
     index = 0
-    latestWORequest = None
-    while(latestWORequest == None):
+    lastMinorBaseTruck = None
+    while(lastMinorBaseTruck == None):
         data['page'] = index
         response = requests.post(url, headers=headers, data=json.dumps(data))
         if response.status_code != 200:
@@ -257,20 +227,21 @@ def checkNewData(inspection_data: list) -> list:
         # get most recent base truck error
         for i in range(df.shape[0]):
             if(df.get("assetId")[i] != None and (df.get("assetId")[i]["subsubtitle"] == "Freightliner" or df.get("assetId")[i]["subsubtitle"] == "Trailer")):
-                latestWORequest = df.get("createdOn")[i]
+                lastMinorBaseTruck = df.get("createdOn")[i]
                 break # If latestDate comes from a base truck work order than use that one
 
         index += 1
     
-    latestFlukeWORUpload = parser.isoparse(latestWORequest)
+    lastMinorBaseTruck = parser.isoparse(lastMinorBaseTruck)
 
     # Gets the latest upload made by this system
-    if(latestBaseTruckWO < latestFlukeWORUpload):
-        latestFlukeUpload = latestFlukeWORUpload
-        print("Latest is from Work Order Requests: ", latestFlukeUpload)
-    else:
-        latestFlukeUpload = latestBaseTruckWO
+    if(lastMinorBaseTruck < lastMajorBaseTruck):
+        latestFlukeUpload = lastMajorBaseTruck
         print("Latest is from Work Orders: ", latestFlukeUpload)
+    else:
+        latestFlukeUpload = lastMinorBaseTruck
+        print("Latest is from Work Orders Requests: ", latestFlukeUpload)
+
 
     # Checks if the new data has already been processed
     filter_data = []
