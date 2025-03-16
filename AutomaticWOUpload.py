@@ -6,15 +6,22 @@ from datetime import datetime, timedelta, timezone
 from tqdm import tqdm
 import os
 
+
 # Cookie to the sandbox
-sandbox_key = os.getenv("FLUKE_KEY")
+sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
+
+# Environment variables from GitHub
+key = "9e90504a-82f0-4ed4-b54c-ce37f388f211"
+
+# Cookie to the sandbox
+# sandbox_key = os.getenv("FLUKE_KEY")
 headers = {
     "Content-Type": "application/json", 
     "Cookie": sandbox_key
 }
 
 # Environment variables from GitHub
-key = os.getenv("MOTIVE_KEY")
+# key = os.getenv("MOTIVE_KEY")
 motive_headers = {
     "accept": "application/json", 
     "X-Api-Key": key
@@ -331,6 +338,9 @@ def convertToPost(data: list, df) -> list:
 
         try: 
             if post['vehicle'] != None:
+                
+                if post['vehicle']['number'].split(" ")[0] == "White":
+                    post['vehicle']['number'] = post['vehicle']['number'].split(" ")[2]
 
                 truckId = None
                 for i, row in df.iterrows():
@@ -388,7 +398,11 @@ def convertToPost(data: list, df) -> list:
         notes = []
 
         for issue in post['issues']:
-            adding = f"{issue['notes']}"
+
+            if(issue['notes'] == ''):
+                adding = 'No comments noted by driver.'
+            else:
+                adding = f"{issue['notes']}"
 
             if issue['priority'] == 'major': # puts the major issue first in the description
                 description.insert(0, issue['category'])
@@ -403,7 +417,7 @@ def convertToPost(data: list, df) -> list:
         if 'major' in notes[0].lower():
             details = f'<b>{post["inspection_type"]} Inspection:</b><br>' + (";<br>".join(f"{i+1}. {desc}" for i, desc in enumerate(notes)))
         else:
-            details = f'<b>Motive Base Truck - {post["inspection_type"]} Inspection:</b><br>' + (";<br>".join(f"{i+1}. {desc}" for i, desc in enumerate(notes)))
+            details = f'<b>Motive Base Truck - {post["inspection_type"]} Inspection:</b><br>' + ("<br>".join(f"{i+1}. {desc}" for i, desc in enumerate(notes)))
 
         return (description, details)
 
@@ -548,11 +562,14 @@ def main():
     WO_posts = convertToPost(data, df)
 
     # posts work orders to fluke and returns the responses
-    responses = postWorkOrders(WO_posts)
+    # responses = postWorkOrders(WO_posts)
 
     # All of the responses of uploaded work orders
-    for response in responses:
-        print(response.json())
+    # for response in responses:
+    #     print(response.json())
+
+    with open('data.json', 'w') as f:
+        json.dump(WO_posts, f)
 
     print("::notice::Detected Work Order Post")
 
