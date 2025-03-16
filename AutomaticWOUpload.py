@@ -562,11 +562,11 @@ def main():
     WO_posts = convertToPost(data, df)
 
     # posts work orders to fluke and returns the responses
-    # responses = postWorkOrders(WO_posts)
+    responses = postWorkOrders(WO_posts)
 
     # All of the responses of uploaded work orders
-    # for response in responses:
-    #     print(response.json())
+    for response in responses:
+        print(response.json())
 
     with open('data.json', 'w') as f:
         json.dump(WO_posts, f)
