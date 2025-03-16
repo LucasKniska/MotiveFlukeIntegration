@@ -3,25 +3,25 @@ import json
 import pandas as pd
 from dateutil import parser
 from datetime import datetime, timedelta, timezone
-from tqdm import tqdm
-import os
 
 
-# Cookie to the sandbox
-sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
+# Tells if the script should be run in test mode or production
+production = False
 
-# Environment variables from GitHub
+# Cookie to the fluke
+production_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3MiLCJleHAiOjQxMDI0NDQ4MDAsInNpZCI6bnVsbCwiaWlkIjpudWxsfQ.Gh3b3ibvSeYy7YpqDUI9daup86dYjsM_lisS-8ESWDs"
+sandbox_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
+
+# Motive Key
 key = "9e90504a-82f0-4ed4-b54c-ce37f388f211"
 
 # Cookie to the sandbox
-# sandbox_key = os.getenv("FLUKE_KEY")
 headers = {
     "Content-Type": "application/json", 
-    "Cookie": sandbox_key
+    "Cookie": "JWT-Bearer=" + (production_key if production else sandbox_key)
 }
 
 # Environment variables from GitHub
-# key = os.getenv("MOTIVE_KEY")
 motive_headers = {
     "accept": "application/json", 
     "X-Api-Key": key
@@ -436,13 +436,22 @@ def convertToPost(data: list, df) -> list:
         else:
             isRequest = True
 
-        work_order_type = {
-            "entity": "WorkOrderTypes",
-            "id": "f04406fe-847e-4d49-899e-0053758d7fc3",
-            "isDeleted": False,
-            "number": 24,
-            "title": "Motive Base Truck Corrective",
-        }
+        if production: 
+            work_order_type = {
+                "entity": "WorkOrderTypes",
+                "id": "ad127a5d-38d8-40ad-9eb0-882abcdde551",
+                "isDeleted": False,
+                "number": 24,
+                "title": "Motive Base truck Corrective"
+            }
+        else:
+            work_order_type = {
+                "entity": "WorkOrderTypes",
+                "id": "f04406fe-847e-4d49-899e-0053758d7fc3",
+                "isDeleted": False,
+                "number": 24,
+                "title": "Motive Base Truck Corrective",
+            }
         job_status = {
             "entity": "JobStatus",
             "id": "11111111-8588-40d2-b33d-111111111113",
@@ -572,6 +581,7 @@ def main():
         json.dump(WO_posts, f)
 
     print("::notice::Detected Work Order Post")
+
 
 if __name__ == "__main__":
     main()
