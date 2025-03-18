@@ -21,6 +21,10 @@ headers = {
     "Cookie": "JWT-Bearer=" + (production_key if production else sandbox_key)
 }
 
+# Values for fluke endpoints
+tenant = "torcrobotics.us.accelix.com" if production else "torcroboticssb.us.accelix.com"
+site = "def"
+
 # Environment variables from GitHub
 motive_headers = {
     "accept": "application/json", 
@@ -42,7 +46,7 @@ def getFreightlinersAndTrailers() -> pd.DataFrame:
 
     print("Getting Asset Information")
     # Get the freightliner assets
-    url = 'https://torcroboticssb.us.accelix.com/api/entities/def/Assets/search-paged'
+    url = f'https://{tenant}/api/entities/{site}/Assets/search-paged'
 
     data = {
         "select": [
@@ -81,7 +85,7 @@ def getFreightlinersAndTrailers() -> pd.DataFrame:
         dx.extend(response.json()['data'])
 
     # Get the trailer assets
-    url = 'https://torcroboticssb.us.accelix.com/api/entities/def/Assets/search-paged'
+    url = f'https://{tenant}/api/entities/{site}/Assets/search-paged'
 
     data = {
         "select": [
@@ -186,34 +190,41 @@ def checkNewData(inspection_data: list) -> list:
     """
 
     # Find the latest issue about the truck uploaded to fluke
-    url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrders/search-paged'
+    url = f'https://{tenant}/api/entities/{site}/WorkOrders/search-paged'
 
     # Cookie to the sandbox
     data = {
         'select': 
-            [{'name': 'openedOn'}, {'name': 'c_priority'}, {'name': 'assetId'}], 
+            [{'name': 'openedOn'}, {'name': 'assetId'}], 
         'filter': {
             'and': [
-                {"name": "c_priority", "op": "eq", "value": "Base Truck Blocking"},
+                {"name": "c_workordertype", "op": "eq", "value": "Motive Base Truck Corrective"},
             ],
         }, 
         'order': [{'name': 'number', 'desc': True}], 'pageSize': 1, 'page': 0, 'fkExpansion': True
     }
 
     response = requests.post(url, headers=headers, data=json.dumps(data))
-    
-    if response.status_code != 200:
-        print("Error getting Work Orders Major Issues")
-        return False
 
-    # The data is filtered to get only the 1 latest base truck blocking 
-    lastMajorBaseTruck = response.json()['data'][0]['openedOn']
+    try:
+        if response.status_code != 200:
+            print("Error getting Work Orders Major Issues")
+            return False
+
+        response.json()
+
+        # The data is filtered to get only the 1 latest base truck blocking 
+        lastMajorBaseTruck = response.json()['data'][0]['openedOn']
+        
+        # The data is filtered to get only the 1 latest base truck nonblocking 
+        lastMajorBaseTruck = parser.isoparse(lastMajorBaseTruck)
+    except:
+        print("No data from last Work Order")
+        lastMajorBaseTruck = datetime(2021, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
     
-    # The data is filtered to get only the 1 latest base truck nonblocking 
-    lastMajorBaseTruck = parser.isoparse(lastMajorBaseTruck)
 
     # Getting the work orders requests latest upload from motive
-    url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrdersRequests/search-paged'
+    url = f'https://{tenant}/api/entities/{site}/WorkOrdersRequests/search-paged'
     # Cookie to the sandbox
     data = {'select': [{'name': 'site'}, {'name': 'createdBy'}, {'name': 'updatedBy'}, {'name': 'updatedSyncDate'}, {'name': 'dataSource'}, {'name': 'status'}, {'name': 'createdOn'}, {'name': 'assetId'}], 'filter': {'and': [{'name': 'isDeleted', 'op': 'isfalse'}]}, 'order': [{'name': 'number', 'desc': True}], 'pageSize': 50, 'page': 0, 'fkExpansion': True}
 
@@ -518,8 +529,6 @@ def postWorkOrders(data: list) -> list:
     """
 
     # Config
-    tenant = "torcroboticssb.us.accelix.com"
-    site = "def"
     woEndpoint = f"https://{tenant}/api/entities/{site}/WorkOrders"
     worEndpoint = f"https://{tenant}/api/entities/{site}/WorkOrdersRequests"
 
@@ -527,9 +536,12 @@ def postWorkOrders(data: list) -> list:
     # Send a post request with the data
     for work_order in data:
         endpoint = ""
-        if 'major' in work_order['properties']['details'].lower():
-            endpoint = woEndpoint
-        else:
+
+        # Check if it should go to work order requests or work order
+        try: 
+            if work_order['properties']['c_workordertype']['title'] == "Motive Base truck Corrective":
+                endpoint = woEndpoint
+        except:
             endpoint = worEndpoint
 
         response = requests.post(endpoint, headers=headers, data=json.dumps(work_order))
@@ -580,7 +592,7 @@ def main():
     with open('data.json', 'w') as f:
         json.dump(WO_posts, f)
 
-    print("::notice::Detected Work Order Post")
+    print("::notice::Detected issue in Inspection Report")
 
 
 if __name__ == "__main__":
