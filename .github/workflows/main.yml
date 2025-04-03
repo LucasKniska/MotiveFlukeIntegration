@@ -1,34 +1,34 @@
 
-name: Run API Calls
+# name: Run API Calls
 
-on:
-  schedule:
-    - cron: "*/10 * * * *"  # Runs change to every 2 minutes
-  workflow_dispatch:
+# on:
+#   schedule:
+#     - cron: "*/10 * * * *"  # Runs change to every 2 minutes
+#   workflow_dispatch:
 
-jobs:
-  run-python:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+# jobs:
+#   run-python:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: '3.9'
 
-      - name: Install Dependencies
-        run: pip install -r requirements.txt || echo "No dependencies"
+#       - name: Install Dependencies
+#         run: pip install -r requirements.txt || echo "No dependencies"
 
-      - name: Run Python Script
-        env:
-          FLUKE_KEY: ${{ secrets.FLUKE_KEY }}
-          MOTIVE_KEY: ${{ secrets.MOTIVE_KEY }}
-          FLUKE_ENDPOINT: ${{ vars.FLUKE_ENDPOINT }}
-          MOTIVE_ENDPOINT: ${{ vars.MOTIVE_ENDPOINT }}
-          TRUCK_IDS: ${{ vars.TRUCK_IDS }}
+#       - name: Run Python Script
+#         env:
+#           FLUKE_KEY: ${{ secrets.FLUKE_KEY }}
+#           MOTIVE_KEY: ${{ secrets.MOTIVE_KEY }}
+#           FLUKE_ENDPOINT: ${{ vars.FLUKE_ENDPOINT }}
+#           MOTIVE_ENDPOINT: ${{ vars.MOTIVE_ENDPOINT }}
+#           TRUCK_IDS: ${{ vars.TRUCK_IDS }}
 
-        run: |
-          python AutomaticWOUpload.py  # Make sure this matches your script name
+#         run: |
+#           python AutomaticWOUpload.py  # Make sure this matches your script name
 
