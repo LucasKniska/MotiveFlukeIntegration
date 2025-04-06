@@ -3,17 +3,16 @@ import json
 import pandas as pd
 from dateutil import parser
 from datetime import datetime, timedelta, timezone
+import os
 
 
 # Tells if the script should be run in test mode or production
 production = False
 
-# Cookie to the fluke
-production_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3MiLCJleHAiOjQxMDI0NDQ4MDAsInNpZCI6bnVsbCwiaWlkIjpudWxsfQ.Gh3b3ibvSeYy7YpqDUI9daup86dYjsM_lisS-8ESWDs"
-sandbox_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
-
-# Motive Key
-key = "9e90504a-82f0-4ed4-b54c-ce37f388f211"
+# Cookie to the sandbox
+sandbox_key = os.getenv("SANDBOX_KEY")
+production_key = os.getenv("PRODUCTION_KEY")
+key = os.getenv("MOTIVE_KEY")
 
 # Cookie to the sandbox
 headers = {
