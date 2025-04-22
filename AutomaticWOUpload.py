@@ -10,14 +10,16 @@ import os
 production = False
 
 # Cookie to the sandbox
-sandbox_key = os.getenv("SANDBOX_KEY")
-production_key = os.getenv("PRODUCTION_KEY")
-key = os.getenv("MOTIVE_KEY")
+sandbox_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
+
+# Environment variables from GitHub
+key = "9e90504a-82f0-4ed4-b54c-ce37f388f211"
+motive_sandbox = "ab7e71b6-e38e-469b-93ac-3b50b81aa8bd"
 
 # Cookie to the sandbox
 headers = {
     "Content-Type": "application/json", 
-    "Cookie": "JWT-Bearer=" + (production_key if production else sandbox_key)
+    "Cookie": "JWT-Bearer=" + sandbox_key
 }
 
 # Values for fluke endpoints
@@ -300,9 +302,12 @@ def getMotiveData() -> list:
 
         issues = issues + new_issues
 
-        # Gets the time from the earliest inspection report in that batch 
-        time = str(response.json()['inspection_reports'][-1]['inspection_report']['time'])
-        time = datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        try: 
+            # Gets the time from the earliest inspection report in that batch 
+            time = str(response.json()['inspection_reports'][-1]['inspection_report']['time'])
+            time = datetime.strptime(time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        except:
+            break
 
         # Get current time in UTC
         now = datetime.now(timezone.utc)
@@ -322,7 +327,6 @@ def getMotiveData() -> list:
 
     # Makes sure the data is new compared to last uploaded fluke data
     data = checkNewData(issues)
-
     if data == False:
         return False
 
@@ -346,42 +350,41 @@ def convertToPost(data: list, df) -> list:
         assetId = {}
         c_compid = ""
 
-        try: 
-            if post['vehicle'] != None:
-                
-                if post['vehicle']['number'].split(" ")[0] == "White":
-                    post['vehicle']['number'] = post['vehicle']['number'].split(" ")[2]
+        try:  
+            if post['vehicle']['number'].split(" ")[0] == "White":
+                post['vehicle']['number'] = post['vehicle']['number'].split(" ")[2]
 
-                truckId = None
-                for i, row in df.iterrows():
-                    if post['vehicle']['number'] in row['c_description']:
-                        truckId = row['id']
-                        break
+            truckId = None
+            index = df[df['c_description'].str.contains(post['vehicle']['number'])].index.tolist()
+            truckId = df.loc[index[0]]['id']
 
-                if truckId == None:
-                    print(f'::notice:: This is not a valid truck in fluke. Ending this post. {post}')
-                    return (False, False)
+            if truckId == None:
+                print(f':notice: This is not a valid truck in fluke. Ending this post. {post}')
+                return (False, False)
 
-                assetId = {
-                    'entity': 'Assets', 
-                    'id': truckId,
-                    'image': None,
-                    'isDeleted': False,
-                    'subsubtitle': post['vehicle']['make'].title(),
-                    'subtitle': post['vehicle']['number'],
-                    'title': post['vehicle']['number']
-                }
+            assetId = {
+                'entity': 'Assets', 
+                'id': truckId,
+                'image': None,
+                'isDeleted': False,
+                'subsubtitle': post['vehicle']['make'].title(),
+                'subtitle': post['vehicle']['number'],
+                'title': post['vehicle']['number']
+            }
 
-                c_compid = post['vehicle']['number']
+            c_compid = post['vehicle']['number']
             
-            else:
+
+        except Exception as err:
+
+            try:
                 trailerId = None
-                for row in df:
-                    if post['asset']['name'] in row[0]:
-                        trailerId = row[1]
+
+                index = df[df['c_description'].str.contains(post['asset']['name'])].index.tolist()
+                trailerId = df.loc[index[0]]['id']
 
                 if trailerId == None:
-                    print(f'::notice:: This is not a valid trailer in fluke. Ending this post. {post}')
+                    print(f':notice: This is not a valid trailer in fluke. Ending this post. {post}')
                     return (False, False)
 
                 assetId = {
@@ -395,12 +398,13 @@ def convertToPost(data: list, df) -> list:
                 }
 
                 c_compid = post['asset']['name']
-        
-        except Exception as err:
-            print("::notice:: Could not process the asset of: " + str(post))
-            return (False, False)
+
+            except Exception as err:
+                print(":notice: Could not process the asset of: " + str(post))
+                return (False, False)
         
         return (assetId, c_compid)
+    
 
     # Converts the description and notes 
     def getDescriptionAndNotes(post):
@@ -437,7 +441,7 @@ def convertToPost(data: list, df) -> list:
 
         # If there is no asset associated with the work order then do not post it
         if not assetId:
-            return False
+            return (False, False)
         
         description, details = getDescriptionAndNotes(post)
 
@@ -500,18 +504,20 @@ def convertToPost(data: list, df) -> list:
         else:
             base_payload["occurredOn"] = post['date']
             base_payload['properties'].update({'c_priority': priority, 'c_jobstatus': job_status, 'c_workordertype': work_order_type})
+        
+        motiveId = post['id']
 
-        return base_payload
+        return (base_payload, motiveId)
 
     # The motive issues converted to fluke payloads
     converted_data = []
     
     # For every truck that needs a post
     for post in data: 
-        post_data = createWorkOrder(post)
+        post_data, motiveId = createWorkOrder(post)
 
         if(post_data != False):
-            converted_data.append(post_data)
+            converted_data.append([post_data, motiveId])
 
     return converted_data
 
@@ -527,6 +533,25 @@ def postWorkOrders(data: list) -> list:
         list: List of responses from the post requests
     """
 
+
+    def giveExternalId(inspectionReportId, inspectionReportDay, externalId):
+        # Need ID and Date of the inspection report
+        url = f"https://api.gomotive.com/v2/inspection_reports/{inspectionReportId}?time={inspectionReportDay}"
+
+        payload = {
+            "external_ids_attributes": [
+            {
+                "external_id": externalId,
+                "integration_name": "Fluke"
+            }
+            ]
+        }
+
+        response = requests.put(url, json=payload, headers=motive_headers)
+
+        print(response.text)
+
+
     # Config
     woEndpoint = f"https://{tenant}/api/entities/{site}/WorkOrders"
     worEndpoint = f"https://{tenant}/api/entities/{site}/WorkOrdersRequests"
@@ -534,17 +559,32 @@ def postWorkOrders(data: list) -> list:
     responses = []
     # Send a post request with the data
     for work_order in data:
-        endpoint = ""
+
+        endpoint = ''
 
         # Check if it should go to work order requests or work order
-        try: 
-            if work_order['properties']['c_workordertype']['title'] == "Motive Base truck Corrective":
+        
+        try:
+            if work_order[0]['properties']['c_workordertype']['title'] == "Motive Base Truck Corrective":
                 endpoint = woEndpoint
-        except:
-            endpoint = worEndpoint
+                
+                response = requests.post(endpoint, headers=headers, data=json.dumps(work_order[0]))
+                responses.append(response)
 
-        response = requests.post(endpoint, headers=headers, data=json.dumps(work_order))
-        responses.append(response)
+                # giveExternalId(work_order[1], work_order[0]['occurredOn'], response.json()['id'])
+            else:
+                endpoint = worEndpoint
+
+                response = requests.post(endpoint, headers=headers, data=json.dumps(work_order[0]))
+                responses.append(response)
+
+                # giveExternalId(work_order[1], work_order[0]['properties']['c_requestedOn'], response.json()['id'])
+        except:
+            print(":notice: Error posting work order")
+            print(work_order[0])
+            print(work_order[1])
+            continue
+
 
     return responses
 
@@ -564,8 +604,6 @@ def main():
     except:
         pass
 
-    # Get motive data again
-    # Getting the freightliners takes 30 seconds, get data after to ensure getting all of the inspection reports
     # Does not take much time at all; not bad to call it twice => if we only call it after then getting asset ids everytime for no reason
     data = getMotiveData()
 
@@ -591,7 +629,7 @@ def main():
     with open('data.json', 'w') as f:
         json.dump(WO_posts, f)
 
-    print("::notice::Detected issue in Inspection Report")
+    print(":notice: Detected issue in Inspection Report")
 
 
 if __name__ == "__main__":

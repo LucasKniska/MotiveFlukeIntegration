@@ -6,6 +6,7 @@ sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkY
 
 # Environment variables from GitHub
 motive_key = "9e90504a-82f0-4ed4-b54c-ce37f388f211"
+motive_sandbox = 'ab7e71b6-e38e-469b-93ac-3b50b81aa8bd'
 
 headers = {
     "Content-Type": "application/json", 
@@ -19,7 +20,6 @@ motive_headers = {
 
 # FIND All newly completed/closed WO(R)
 def filterMinorsFromMotive(inspectionReports):
-
     filtered = []
 
     for report in inspectionReports['data']:
@@ -39,7 +39,7 @@ def findCompletedWorkOrdersAndRequests():
     # Cookie to the sandbox
     data = {
         'select': 
-            [{'name': 'id'}, {'name': 'closedOn'}, {'name': 'updatedBy'}, {'name': 'c_priority'}, {'name': 'assetId'}, {'name': 'c_maintenancelog'}, {'name': 'status'}], 
+            [{'name': 'id'}, {'name': 'closedOn'}, {'name': 'updatedBy'}, {'name': 'openedOn'}, {'name': 'c_priority'}, {'name': 'assetId'}, {'name': 'c_maintenancelog'}, {'name': 'status'}], 
         'filter': {
             'and': [
                 {"name": "c_workordertype", "op": "eq", "value": "Motive Base Truck Corrective"},
@@ -134,7 +134,7 @@ def lookForClosedWO(currentWO):
         if(wo['status'] == "X"):
             print("Minor Work Order Request Rejected: ", wo)
 
-            data = getByExternalId(wo['id'])
+            data = getByExternalId(wo['id'], wo['requestedOn'])
 
             if data == False:
                 print("NO data found for: ", wo['id'])
@@ -156,7 +156,7 @@ def lookForClosedWO(currentWO):
             print("Minor Work Order Closed: ", wo)
             print("   Request Id: ", wo['requestId'])
 
-            data = getByExternalId(wo['requestId']['id'])
+            data = getByExternalId(wo['requestId']['id'], wo['openedOn'])
 
             if data == False:
                 print("NO data found for: ", wo['id'])
@@ -205,7 +205,8 @@ def resolveInspectionReport(data):
     "defect_statuses": {
       "resolved_defects": data['inspected_parts'],
       "mechanic_signed_at": data['closedOn'],
-      "resolver_id": 4288195, # Carlas resolver id
+    #   "resolver_id": 4288195, # Carlas resolver id
+      "resolver_id": 5531505, # Tester id
       "mechanic_name": data['name'],
       "mechanic_note": data['mechanic_note'],
       "status": "repaired"
