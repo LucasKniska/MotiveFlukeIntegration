@@ -2,6 +2,7 @@ import requests
 import json
 
 # Cookie to the sandbox
+production_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3MiLCJleHAiOjQxMDI0NDQ4MDAsInNpZCI6bnVsbCwiaWlkIjpudWxsfQ.Gh3b3ibvSeYy7YpqDUI9daup86dYjsM_lisS-8ESWDs"
 sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
 
 # Environment variables from GitHub
@@ -10,7 +11,7 @@ motive_sandbox = 'ab7e71b6-e38e-469b-93ac-3b50b81aa8bd'
 
 headers = {
     "Content-Type": "application/json", 
-    "Cookie": sandbox_key
+    "Cookie": production_key,
 }
 
 motive_headers = {
@@ -33,6 +34,7 @@ def filterMinorsFromMotive(inspectionReports):
     return filtered
 
 def findCompletedWorkOrdersAndRequests():
+    
     # Completed Work Orders Section
     url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrders/search-paged'
 
@@ -58,14 +60,15 @@ def findCompletedWorkOrdersAndRequests():
     except:
         MajorReportStatus = []
 
-    # Getting work order requests statuses
+
+    # Getting completed work order requests statuses
     # Completed Work Orders Section
     url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrders/search-paged'
 
     # Cookie to the sandbox
     data = {
         'select': 
-            [{'name': 'id'}, {'name': 'closedOn'}, {'name': 'updatedBy'}, {'name': 'openedOn'}, {'name': 'c_priority'}, {'name': 'assetId'}, {'name': 'status'}, {'name': 'details'}, {'name': 'requestId'}], 
+            [{'name': 'id'}, {'name': 'closedOn'}, {'name': 'updatedBy'}, {'name': 'openedOn'}, {'name': 'c_priority'}, {'name': 'assetId'}, {'name': 'c_maintenancelog'}, {'name': 'status'}, {'name': 'details'}, {'name': 'requestId'}], 
         'filter': {
             'and': [
                 {"name": "status", "op": "eq", "value": "H"},
@@ -83,7 +86,7 @@ def findCompletedWorkOrdersAndRequests():
     MinorReportStatus = response
 
 
-    # Getting work order requests statuses
+    # Getting rejected work order requests statuses
     # Completed Work Orders Section
     url = 'https://torcroboticssb.us.accelix.com/api/entities/def/WorkOrdersRequests/search-paged'
 
@@ -134,14 +137,14 @@ def lookForClosedWO(currentWO):
         if(wo['status'] == "X"):
             print("Minor Work Order Request Rejected: ", wo)
 
-            data = getByExternalId(wo['id'], wo['requestedOn'])
+            data = getByExternalId(wo['id'])
 
             if data == False:
                 print("NO data found for: ", wo['id'])
                 continue
 
             data = {
-                "log_id": data['inspection_report']['log_id'],
+                "log_id": data['inspection_report']['id'],
                 'date': data['inspection_report']['date'],
                 'inspected_parts': [part['id'] for part in data['inspection_report']['inspected_parts']],
                 'closedOn': data['inspection_report']['date'],
@@ -156,14 +159,14 @@ def lookForClosedWO(currentWO):
             print("Minor Work Order Closed: ", wo)
             print("   Request Id: ", wo['requestId'])
 
-            data = getByExternalId(wo['requestId']['id'], wo['openedOn'])
+            data = getByExternalId(wo['requestId']['id'])
 
             if data == False:
                 print("NO data found for: ", wo['id'])
                 continue
 
             data = {
-                "log_id": data['inspection_report']['log_id'],
+                "log_id": data['inspection_report']['id'],
                 'date': data['inspection_report']['date'],
                 'inspected_parts': [part['id'] for part in data['inspection_report']['inspected_parts']],
                 'closedOn': wo['closedOn'],
@@ -185,7 +188,7 @@ def lookForClosedWO(currentWO):
                 continue
 
             data = {
-                "log_id": data['inspection_report']['log_id'],
+                "log_id": data['inspection_report']['id'],
                 'date': data['inspection_report']['date'],
                 'inspected_parts': [part['id'] for part in data['inspection_report']['inspected_parts']],
                 'closedOn': wo['closedOn'],
@@ -205,7 +208,7 @@ def resolveInspectionReport(data):
     "defect_statuses": {
       "resolved_defects": data['inspected_parts'],
       "mechanic_signed_at": data['closedOn'],
-    #   "resolver_id": 4288195, # Carlas resolver id
+    #   "resolver_id": 4288195, # Carlas resolver id - Prod.
       "resolver_id": 5531505, # Tester id
       "mechanic_name": data['name'],
       "mechanic_note": data['mechanic_note'],

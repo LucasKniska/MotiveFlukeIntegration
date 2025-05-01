@@ -7,31 +7,30 @@ import os
 
 
 # Tells if the script should be run in test mode or production
-production = False
+production = True
+motiveProduction = True
+checkData = True
 
-# Cookie to the sandbox
+# Cookie to the fluke
+production_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3MiLCJleHAiOjQxMDI0NDQ4MDAsInNpZCI6bnVsbCwiaWlkIjpudWxsfQ.Gh3b3ibvSeYy7YpqDUI9daup86dYjsM_lisS-8ESWDs"
 sandbox_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
 
-# Environment variables from GitHub
-key = "9e90504a-82f0-4ed4-b54c-ce37f388f211"
-motive_sandbox = "ab7e71b6-e38e-469b-93ac-3b50b81aa8bd"
+# Motive API Key
+key = "9e90504a-82f0-4ed4-b54c-ce37f388f211" if motiveProduction else "ab7e71b6-e38e-469b-93ac-3b50b81aa8bd" # - This is the key for the sandbox account
 
-# Cookie to the sandbox
 headers = {
     "Content-Type": "application/json", 
-    "Cookie": "JWT-Bearer=" + sandbox_key
+    "Cookie": "JWT-Bearer=" + production_key if production else "JWT-Bearer=" + sandbox_key,
 }
 
-# Values for fluke endpoints
-tenant = "torcrobotics.us.accelix.com" if production else "torcroboticssb.us.accelix.com"
-site = "def"
-
-# Environment variables from GitHub
 motive_headers = {
     "accept": "application/json", 
     "X-Api-Key": key
 }
 
+# Values for fluke endpoints
+tenant = "torcrobotics.us.accelix.com" if production else "torcroboticssb.us.accelix.com"
+site = "def"
 
 def getFreightlinersAndTrailers() -> pd.DataFrame:
     """
@@ -45,7 +44,6 @@ def getFreightlinersAndTrailers() -> pd.DataFrame:
 
     """
 
-    print("Getting Asset Information")
     # Get the freightliner assets
     url = f'https://{tenant}/api/entities/{site}/Assets/search-paged'
 
@@ -71,7 +69,7 @@ def getFreightlinersAndTrailers() -> pd.DataFrame:
     response = requests.post(url, headers=headers, data=json.dumps(data))
     
     if response.status_code != 200:
-        print("Error getting Freightliners")
+        print("Error getting Freightliners", flush=True)
         return False
     
     response = response.json()
@@ -81,7 +79,7 @@ def getFreightlinersAndTrailers() -> pd.DataFrame:
         data['page'] = page
         response = requests.post(url, headers=headers, data=json.dumps(data))
         if response.status_code != 200:
-            print("Error getting Freightliners")
+            print("Error getting Freightliners", flush=True)
             return False
         dx.extend(response.json()['data'])
 
@@ -109,7 +107,7 @@ def getFreightlinersAndTrailers() -> pd.DataFrame:
     # API
     response = requests.post(url, headers=headers, data=json.dumps(data))
     if response.status_code != 200:
-        print("Error getting Trailers")
+        print("Error getting Trailers", flush=True)
         return False
     response = response.json()
     dx.extend(response['data'])
@@ -118,7 +116,7 @@ def getFreightlinersAndTrailers() -> pd.DataFrame:
         data['page'] = page
         response = requests.post(url, headers=headers, data=json.dumps(data))
         if response.status_code != 200:
-            print("Error getting Trailers")
+            print("Error getting Trailers", flush=True)
             return False
         dx.extend(response.json()['data'])
 
@@ -209,7 +207,7 @@ def checkNewData(inspection_data: list) -> list:
 
     try:
         if response.status_code != 200:
-            print("Error getting Work Orders Major Issues")
+            print("Error getting Work Orders Major Issues", flush=True)
             return False
 
         response.json()
@@ -220,7 +218,6 @@ def checkNewData(inspection_data: list) -> list:
         # The data is filtered to get only the 1 latest base truck nonblocking 
         lastMajorBaseTruck = parser.isoparse(lastMajorBaseTruck)
     except:
-        print("No data from last Work Order")
         lastMajorBaseTruck = datetime(2021, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc)
     
 
@@ -235,7 +232,7 @@ def checkNewData(inspection_data: list) -> list:
         data['page'] = index
         response = requests.post(url, headers=headers, data=json.dumps(data))
         if response.status_code != 200:
-            print("Error getting Work Order Requests")
+            print("Error getting Work Order Requests", flush=True)
             return False
         
         dx = response.json()['data']
@@ -256,10 +253,8 @@ def checkNewData(inspection_data: list) -> list:
     # Gets the latest upload made by this system
     if(lastMinorBaseTruck < lastMajorBaseTruck):
         latestFlukeUpload = lastMajorBaseTruck
-        print("Latest is from Work Orders: ", latestFlukeUpload)
     else:
         latestFlukeUpload = lastMinorBaseTruck
-        print("Latest is from Work Orders Requests: ", latestFlukeUpload)
 
 
     # Checks if the new data has already been processed
@@ -267,8 +262,6 @@ def checkNewData(inspection_data: list) -> list:
     for report in inspection_data:
         motiveTime = parser.isoparse(report["date"])
         
-        print(f'{motiveTime} - Motive Time : {latestFlukeUpload} - Fluke Time')
-
         if(motiveTime > latestFlukeUpload): # if motive inspection report time comes after the latest date from fluke
             filter_data.append(report)
 
@@ -295,7 +288,7 @@ def getMotiveData() -> list:
         response = requests.get(motive, headers=motive_headers)
 
         if response.status_code != 200:
-            print("Error getting Motive Data")
+            print("Error getting Motive Data", flush=True)
             return False
 
         new_issues = filterIssues(response.json())
@@ -319,14 +312,18 @@ def getMotiveData() -> list:
             break
             
         try: 
-            str(len(issues)) + " " + str(index) + " " + str(response.json()['inspection_reports'][0]['inspection_report']['time'])
+            print(str(len(issues)) + " " + str(index) + " " + str(response.json()['inspection_reports'][0]['inspection_report']['time']))
         except:
-            print(response.json())
             break
         index += 1
 
     # Makes sure the data is new compared to last uploaded fluke data
-    data = checkNewData(issues)
+    if checkData or production:
+        data = checkNewData(issues)
+    else: 
+        data = issues
+
+    # data = issues
     if data == False:
         return False
 
@@ -359,7 +356,7 @@ def convertToPost(data: list, df) -> list:
             truckId = df.loc[index[0]]['id']
 
             if truckId == None:
-                print(f':notice: This is not a valid truck in fluke. Ending this post. {post}')
+                print(f'Error: This is not a valid truck in fluke. Ending this post. {post}', flush=True)
                 return (False, False)
 
             assetId = {
@@ -384,7 +381,7 @@ def convertToPost(data: list, df) -> list:
                 trailerId = df.loc[index[0]]['id']
 
                 if trailerId == None:
-                    print(f':notice: This is not a valid trailer in fluke. Ending this post. {post}')
+                    print(f'Error: This is not a valid trailer in fluke. Ending this post. {post}', flush=True)
                     return (False, False)
 
                 assetId = {
@@ -400,7 +397,7 @@ def convertToPost(data: list, df) -> list:
                 c_compid = post['asset']['name']
 
             except Exception as err:
-                print(":notice: Could not process the asset of: " + str(post))
+                print("Error: Could not process the asset of: " + str(post), flush=True)
                 return (False, False)
         
         return (assetId, c_compid)
@@ -549,7 +546,7 @@ def postWorkOrders(data: list) -> list:
 
         response = requests.put(url, json=payload, headers=motive_headers)
 
-        print(response.text)
+        # print(response.text, flush=True)
 
 
     # Config
@@ -565,24 +562,24 @@ def postWorkOrders(data: list) -> list:
         # Check if it should go to work order requests or work order
         
         try:
-            if work_order[0]['properties']['c_workordertype']['title'] == "Motive Base Truck Corrective":
+            if work_order[0]['properties']['details'][0:20] != "<b>Motive Base Truck":
                 endpoint = woEndpoint
                 
                 response = requests.post(endpoint, headers=headers, data=json.dumps(work_order[0]))
                 responses.append(response)
 
-                # giveExternalId(work_order[1], work_order[0]['occurredOn'], response.json()['id'])
+                giveExternalId(work_order[1], work_order[0]['occurredOn'], response.json()['id'])
             else:
                 endpoint = worEndpoint
 
                 response = requests.post(endpoint, headers=headers, data=json.dumps(work_order[0]))
                 responses.append(response)
 
-                # giveExternalId(work_order[1], work_order[0]['properties']['c_requestedOn'], response.json()['id'])
+                giveExternalId(work_order[1], work_order[0]['properties']['c_requestedOn'], response.json()['id'])
         except:
-            print(":notice: Error posting work order")
-            print(work_order[0])
-            print(work_order[1])
+            print("Error posting work order", flush=True)
+            print("Payload Data: " + str(work_order[0]), flush=True)
+            print("Motive ID: " + str(work_order[1]), flush=True)
             continue
 
 
@@ -613,7 +610,7 @@ def main():
 
     # only continues if there is an inspection report to upload
     if len(data) == 0:
-        print("No new data.")
+        print("No new data.", flush=True)
         return
 
     # converts the previous data list to a list that can be posted to fluke api
@@ -623,13 +620,7 @@ def main():
     responses = postWorkOrders(WO_posts)
 
     # All of the responses of uploaded work orders
-    for response in responses:
-        print(response.json())
-
-    with open('data.json', 'w') as f:
-        json.dump(WO_posts, f)
-
-    print(":notice: Detected issue in Inspection Report")
+    print(":notice: Inspection Report Found", flush=True)
 
 
 if __name__ == "__main__":
