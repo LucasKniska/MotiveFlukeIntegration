@@ -318,7 +318,7 @@ def getMotiveData() -> list:
         index += 1
 
     # Makes sure the data is new compared to last uploaded fluke data
-    if checkData or production:
+    if checkData:
         data = checkNewData(issues)
     else: 
         data = issues
@@ -569,6 +569,8 @@ def postWorkOrders(data: list) -> list:
                 responses.append(response)
 
                 giveExternalId(work_order[1], work_order[0]['occurredOn'], response.json()['id'])
+
+                print("Work Order Posted")
             else:
                 endpoint = worEndpoint
 
@@ -576,6 +578,8 @@ def postWorkOrders(data: list) -> list:
                 responses.append(response)
 
                 giveExternalId(work_order[1], work_order[0]['properties']['c_requestedOn'], response.json()['id'])
+
+                print("Work Order Posted")
         except:
             print("Error posting work order", flush=True)
             print("Payload Data: " + str(work_order[0]), flush=True)
