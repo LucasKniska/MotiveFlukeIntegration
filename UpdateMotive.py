@@ -208,8 +208,8 @@ def resolveInspectionReport(data):
     "defect_statuses": {
       "resolved_defects": data['inspected_parts'],
       "mechanic_signed_at": data['closedOn'],
-    #   "resolver_id": 4288195, # Carlas resolver id - Prod.
-      "resolver_id": 5531505, # Tester id
+      "resolver_id": 4288195, # Carlas resolver id - Prod.
+    #   "resolver_id": 5531505, # Tester id
       "mechanic_name": data['name'],
       "mechanic_note": data['mechanic_note'],
       "status": "repaired"
