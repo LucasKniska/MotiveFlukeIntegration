@@ -1,6 +1,7 @@
 import requests
 import json
 
+production = True
 # Cookie to the sandbox
 production_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3MiLCJleHAiOjQxMDI0NDQ4MDAsInNpZCI6bnVsbCwiaWlkIjpudWxsfQ.Gh3b3ibvSeYy7YpqDUI9daup86dYjsM_lisS-8ESWDs"
 sandbox_key = "JWT-Bearer=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1aWQiOiI5NWZkYzZhYS0wOWNiLTQ0NzMtYTIxZC1kNzBiZTE2NWExODMiLCJ0aWQiOiJUb3JjUm9ib3RpY3NTQiIsImV4cCI6NDEwMjQ0NDgwMCwic2lkIjpudWxsLCJpaWQiOm51bGx9.94frut80sKx43Cm4YKfVbel8upAQ8glWdfYIN3tMF7A"
@@ -162,7 +163,7 @@ def lookForClosedWO(currentWO):
             data = getByExternalId(wo['requestId']['id'])
 
             if data == False:
-                print("NO data found for: ", wo['id'])
+                print("NO data found for: ", wo['requestId']['id'])
                 continue
 
             data = {
@@ -208,8 +209,7 @@ def resolveInspectionReport(data):
     "defect_statuses": {
       "resolved_defects": data['inspected_parts'],
       "mechanic_signed_at": data['closedOn'],
-      "resolver_id": 4288195, # Carlas resolver id - Prod.
-    #   "resolver_id": 5531505, # Tester id
+      "resolver_id": 4288195 if production else 5531505, # Carlas resolver id - Prod.
       "mechanic_name": data['name'],
       "mechanic_note": data['mechanic_note'],
       "status": "repaired"
