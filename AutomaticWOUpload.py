@@ -154,7 +154,8 @@ def filterIssues(inspection_data: list) -> list:
       'driver': inspection.get('driver'),
       'inspection_type': "Post Trip" if inspection.get('inspection_type') == "post_trip" else "Pre Trip",
       'odometer': inspection.get('odometer'),
-      'issues': []
+      'issues': [],
+      'status': inspection.get('status'),
     }
 
     # Check for issues in inspected parts; one truck can have more than one issue (Reason for truck_issues variable)
@@ -171,7 +172,7 @@ def filterIssues(inspection_data: list) -> list:
         truck_issues['issues'].append(issue)  
 
     # If there are any issues on this inspection report add it to the list
-    if truck_issues['issues']:
+    if truck_issues['issues'] and truck_issues['status'] != 'resolved' and truck_issues['status'] != 'acceptable':
       important_issues.append(truck_issues)
 
   return important_issues
