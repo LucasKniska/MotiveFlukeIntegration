@@ -53,7 +53,6 @@ def findCompletedWorkOrdersAndRequests():
     }
 
     response = requests.post(url, headers=headers, data=json.dumps(data))
-    print("Major Work Orders: ", response.status_code)
 
     # Checks status from major issues 
     try:
@@ -79,7 +78,6 @@ def findCompletedWorkOrdersAndRequests():
     }
 
     response = requests.post(url, headers=headers, data=json.dumps(data))
-    print("Minor Work Orders ", response.status_code)
 
     response = filterMinorsFromMotive(response.json())
 
@@ -104,7 +102,6 @@ def findCompletedWorkOrdersAndRequests():
     }
 
     response = requests.post(url, headers=headers, data=json.dumps(data))
-    print("Minor Work Orders ", response.status_code)
 
     response = filterMinorsFromMotive(response.json())
     MinorWOR = response
@@ -136,12 +133,11 @@ def lookForClosedWO(currentWO):
 
     for wo in currentWO['WOR']:
         if(wo['status'] == "X"):
-            print("Minor Work Order Request Rejected: ", wo)
 
             data = getByExternalId(wo['id'])
 
             if data == False:
-                print("NO data found for: ", wo['id'])
+                print("NO data found for: ", wo['id'], flush=True)
                 continue
 
             data = {
@@ -157,13 +153,10 @@ def lookForClosedWO(currentWO):
 
     for wo in currentWO['MinorWO']:
         if(wo['status'] == "H"):
-            print("Minor Work Order Closed: ", wo)
-            print("   Request Id: ", wo['requestId'])
-
             data = getByExternalId(wo['requestId']['id'])
 
             if data == False:
-                print("NO data found for: ", wo['requestId']['id'])
+                print("Error: NO data found for: ", wo['requestId']['id'], flush=True)
                 continue
 
             data = {
@@ -180,12 +173,16 @@ def lookForClosedWO(currentWO):
     
     for wo in currentWO['MajorWO']:
         if(wo['status'] == "H"):
-            print("Major Work Order Closed: ", wo)
+            # Uses the request id if necessary
+            try:
+                wo['id'] = wo['requestId']['id']
+            except:
+                pass
 
             data = getByExternalId(wo['id'])
 
             if data == False:
-                print("NO data found for: ", wo['id'])
+                print("Error: NO data found for: ", wo['id'], flush=True)
                 continue
 
             data = {
@@ -217,7 +214,6 @@ def resolveInspectionReport(data):
   }
 
   response = requests.put(url, json=payload, headers=motive_headers)
-  print(response.text)
 
 if __name__ == "__main__":
     # Current Work orders and requests
