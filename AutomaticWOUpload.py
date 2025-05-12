@@ -160,8 +160,12 @@ def filterIssues(inspection_data: list) -> list:
 
     # Check for issues in inspected parts; one truck can have more than one issue (Reason for truck_issues variable)
     for part in inspection.get('inspected_parts', []):
-      if part.get('type') == 'major' or part.get('type') == 'minor': # or part.get('type') == 'minor':
+      if part.get('type') == 'major' or part.get('type') == 'minor' or part.get('type') == 'unknown': # or part.get('type') == 'minor':
         
+        # Set unknown to major
+        if(part.get('type') == 'unknown'): 
+            part['type'] = 'major' # Unknown issues are major issues
+
         # Add all documentation necessary to address the issue
         issue = {
           'inspected_item': part.get('id'),
@@ -172,7 +176,7 @@ def filterIssues(inspection_data: list) -> list:
         truck_issues['issues'].append(issue)  
 
     # If there are any issues on this inspection report add it to the list
-    if truck_issues['issues'] and truck_issues['status'] != 'resolved' and truck_issues['status'] != 'acceptable':
+    if truck_issues['issues'] and truck_issues['status'] != 'resolved':
       important_issues.append(truck_issues)
 
   return important_issues
@@ -313,7 +317,7 @@ def getMotiveData() -> list:
             break
             
         try: 
-            print(str(len(issues)) + " " + str(index) + " " + str(response.json()['inspection_reports'][0]['inspection_report']['time']))
+            test = str(len(issues)) + " " + str(index) + " " + str(response.json()['inspection_reports'][0]['inspection_report']['time'])
         except:
             break
         index += 1
@@ -547,9 +551,6 @@ def postWorkOrders(data: list) -> list:
 
         response = requests.put(url, json=payload, headers=motive_headers)
 
-        # print(response.text, flush=True)
-
-
     # Config
     woEndpoint = f"https://{tenant}/api/entities/{site}/WorkOrders"
     worEndpoint = f"https://{tenant}/api/entities/{site}/WorkOrdersRequests"
@@ -571,7 +572,6 @@ def postWorkOrders(data: list) -> list:
 
                 giveExternalId(work_order[1], work_order[0]['occurredOn'], response.json()['id'])
 
-                print("Work Order Posted")
             else:
                 endpoint = worEndpoint
 
@@ -580,7 +580,6 @@ def postWorkOrders(data: list) -> list:
 
                 giveExternalId(work_order[1], work_order[0]['properties']['c_requestedOn'], response.json()['id'])
 
-                print("Work Order Posted")
         except:
             print("Error posting work order", flush=True)
             print("Payload Data: " + str(work_order[0]), flush=True)
